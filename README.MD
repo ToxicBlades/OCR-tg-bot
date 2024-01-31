@@ -1,14 +1,9 @@
 # This is small OCR using Tesseract
 
-## The main solution is to automize processing of visit cards which company recieves on exhibitions
+Its used atm to create a telegram bot which will recive photo from user and then recognise text from it and then send it back to user
 
-At the moment this code preprocess image before extracting text, extract text and then send it to users
+## Preprocessing
 
-## After testing that OCR will work good We will add api callls to our CRM which will automaticly create new contant with data recived
-
-<<<<<<< HEAD
-I will use api of creation(in our crm system) and chag-gpt for prepocessing info to get everything good formated in json file with needed info
-=======
 1. First step - Normalization <br />
    This process changes the range of pixel intensity values. The purpose of performing normalization is to bring image to range that is normal to sense. OpenCV uses normalize () function for the image normalization.
 2. Second step - Skew Correction <br />
@@ -23,4 +18,3 @@ I will use api of creation(in our crm system) and chag-gpt for prepocessing info
    This process converts an image from other color spaces to shades of Gray. The colour varies between complete black and complete white. OpenCV’s cvtColor() function perform this task very easily
 7. Seventh step - Thresholding or Binarization <br />
    This step converts any colored image into a binary image that contains only two colors black and white. It is done by fixing a threshold (normally half of the pixel range 0-255, i.e., 127). The pixel value having greater than the threshold is converted into a white pixel else into a black pixel. To determine the threshold value according to the image Otsu’s Binarization and Adaptive Binarization can be a better choice. In OpenCV, this can be done as given.
->>>>>>> fd1443c (readme changed)
