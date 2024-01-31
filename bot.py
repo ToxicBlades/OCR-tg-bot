@@ -3,7 +3,7 @@ from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from PIL import Image, ImageEnhance
 import pytesseract
-
+from preprocess import preprocess_image
 from config import INFO_CHAT_ID,TESTBOTKEY,BOTKEY,CHAT_TEST
 
 # Path to tesseract executable
@@ -13,27 +13,17 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tess
 # Function to extract text from an image
 def extract_text_from_image(image_path):
     try:
-        img = Image.open(image_path)
-
-        # Convert the image to grayscale
-        img = img.convert('L')
-
-        # Enhance the contrast
-        enhancer = ImageEnhance.Contrast(img)
-        img = enhancer.enhance(2)
-
-        # Apply a threshold filter
-        img = img.point(lambda p: p > 128 and 255)
-
+        img = preprocess_image(image_path)
         text = pytesseract.image_to_string(img)
         return text
+
 
     except Exception as e:
         return str(e)
 
 # Callback function for the /start command
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Hi! Send me a photo and I will perform OCR on it.')
+    update.message.reply_text('Здраствуйте, отправьте мне фото хорошего качества(нормальной освещение и не размытое изображения)')
 
 # Callback function for handling photos
 def handle_photo(update: Update, context: CallbackContext) -> None:
