@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import requests
 
 from config import OCR_API
@@ -58,5 +59,6 @@ def ocr_space_url(url, overlay=False, api_key='helloworld', language='eng'):
 
 
 # Use examples:
-test_file = ocr_space_file(filename='./test_photo/test4.jpg', language='eng')
+test_file = ocr_space_file(filename='./test_photo/test_4_wtf.jpg')
 print(test_file)
+print(type(test_file))

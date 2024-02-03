@@ -1,63 +1,64 @@
+import telebot
+from config import OCR_API, TESTBOTKEY
+import requests
 import os
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-from PIL import Image, ImageEnhance
-import pytesseract
-from preprocess import preprocess_image
-from config import INFO_CHAT_ID,TESTBOTKEY,BOTKEY,CHAT_TEST
+TOKEN = TESTBOTKEY
+bot = telebot.TeleBot(TOKEN)
 
-# Path to tesseract executable
-# For Windows, it's usually something like 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
-pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
-# Function to extract text from an image
-def extract_text_from_image(image_path):
+def ocr_space_file(filename, overlay=False, api_key=OCR_API, language='eng'):
+    payload = {'isOverlayRequired': overlay,
+               'apikey': api_key,
+               'language': language,
+               }
+    with open(filename, 'rb') as f:
+        r = requests.post('https://api.ocr.space/parse/image',
+                          files={filename: f},
+                          data=payload,
+                          )
+
+    result_json = r.json()
+    parsed_text = result_json['ParsedResults'][0]['ParsedText']
+    return parsed_text
+
+
+def handle_document(message):
     try:
-        img = preprocess_image(image_path)
-        text = pytesseract.image_to_string(img)
-        return text
+        # Get the file ID of the document
+        file_id = message.document.file_id
 
+        # Download the document
+        file_info = bot.get_file(file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        # Save the document
+        document_filename = f"temp_document_{file_id}.jpg"
+        with open(document_filename, 'wb') as new_file:
+            new_file.write(downloaded_file)
+
+        # Perform OCR on the saved document
+        ocr_result = ocr_space_file(document_filename)
+
+        # Send the OCR result back to the user
+        bot.reply_to(message, f"OCR Result:\n{ocr_result}")
 
     except Exception as e:
-        return str(e)
+        print(f"Error processing document: {e}")
+        bot.reply_to(message, "Error processing document. Please try again.")
 
-# Callback function for the /start command
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Здраствуйте, отправьте мне фото хорошего качества(нормальной освещение и не размытое изображения)')
+    finally:
+        # Delete the temporary file
+        try:
+            os.remove(document_filename)
+        except Exception as e:
+            print(f"Error deleting document file: {e}")
 
-# Callback function for handling photos
-def handle_photo(update: Update, context: CallbackContext) -> None:
-    file_id = update.message.photo[-1].file_id
-    file = context.bot.get_file(file_id)
-    file_path = file.file_path
 
-    # Download the photo
-    photo_path = os.path.join('downloads', f'{file_id}.jpg')
-    file.download(photo_path)
 
-    # Perform OCR on the downloaded photo
-    extracted_text = extract_text_from_image(photo_path)
+@bot.message_handler(content_types=['document'])
+def handle_document_message(message):
+    handle_document(message)
 
-    # Send the extracted text back to the user
-    update.message.reply_text(f'Extracted Text:\n{extracted_text}')
 
-    os.remove(photo_path)
-
-# Main function to start the bot
-def main():
-    # Set your Telegram bot token here
-    token = TESTBOTKEY
-
-    updater = Updater(token, use_context=True)
-    dispatcher = updater.dispatcher
-
-    # Add command handlers
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.photo, handle_photo))
-
-    # Start the bot
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    bot.polling(none_stop=True)
