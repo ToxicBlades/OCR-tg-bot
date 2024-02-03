@@ -5,11 +5,13 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
+from email.mime.base import MIMEBase
+from email import encoders
+import re
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
 # Predefined Excel file details
-PREDEFINED_EXCEL_FILENAME = "predefined_excel_file.xlsx"
+PREDEFINED_EXCEL_FILENAME = "test.xlsx"
 
 
 # Gmail SMTP settings
@@ -18,14 +20,32 @@ SMTP_PORT = 587
 SMTP_USERNAME = SMTP_MAIL
 SMTP_PASSWORD = SMTP_PASS
 
-def send_email(receiver_email):
 
+def extract_email_from_ocr_result(ocr_result):
+    # Use regular expression to find and extract email address
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    match = re.search(email_pattern, ocr_result)
 
+    if match:
+        return match.group()
+    else:
+        return None
+
+def send_email(receiver_email, attachment_path=None):
     msg = MIMEMultipart()
     msg['From'] = SMTP_USERNAME
     msg['To'] = receiver_email
     msg['Subject'] = 'This is sam global trading'
     msg.attach(MIMEText('This is our offers to you', 'plain'))
+
+    # Attach Excel file if provided
+    if attachment_path:
+        with open(attachment_path, 'rb') as attachment:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(attachment_path)}"')
+            msg.attach(part)
 
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
         server.starttls()
@@ -68,12 +88,14 @@ def handle_document(message):
         bot.reply_to(message, f"OCR Result:\n{ocr_result}")
 
         # Send an email with
-        receiver_email = "toxicblade.work@gmail.com"  # Replace with the recipient's email address
-        send_email(receiver_email)
+        receiver_email = extract_email_from_ocr_result(ocr_result)
+        excel_attachment_path = PREDEFINED_EXCEL_FILENAME
+        send_email(receiver_email, attachment_path=excel_attachment_path)
 
     except Exception as e:
         print(f"Error processing document: {e}")
         bot.reply_to(message, "Error processing document. Please try again.")
+
 
     finally:
         # Delete the temporary file
