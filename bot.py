@@ -1,5 +1,5 @@
 import telebot
-from config import OCR_API, TESTBOTKEY, SMTP_MAIL , SMTP_PASS
+from config import OCR_API, TESTBOTKEY, SMTP_MAIL , SMTP_PASS, CHAT_TEST
 import requests
 import os
 import smtplib
@@ -40,9 +40,9 @@ def start_bot():
 
 
 def extract_email_from_ocr_result(ocr_result):
-    """
-    Using pattern re which helps to find word which contains @ (email)
-    """
+    if not isinstance(ocr_result, str):
+        raise TypeError("Input must be a string")
+
     email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     match = re.search(email_pattern, ocr_result)
 
@@ -51,31 +51,38 @@ def extract_email_from_ocr_result(ocr_result):
     else:
         return None
 
+
 def send_email(receiver_email, attachment_path=None):
     """
     Connecting to gmail smtp using email and app password
     Adding attachment if provided
     And then send email with prededicated text, subject.
     """
-    msg = MIMEMultipart()
-    msg['From'] = SMTP_USERNAME
-    msg['To'] = receiver_email
-    msg['Subject'] = 'This is sam global trading'
-    msg.attach(MIMEText('This is our offers to you', 'plain'))
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USERNAME
+        msg['To'] = receiver_email
+        msg['Subject'] = 'This is sam global trading'
+        msg.attach(MIMEText('This is our offers to you', 'plain'))
 
-    # Attach Excel file if provided
-    if attachment_path:
-        with open(attachment_path, 'rb') as attachment:
-            part = MIMEBase('application', 'octet-stream')
-            part.set_payload(attachment.read())
-            encoders.encode_base64(part)
-            part.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(attachment_path)}"')
-            msg.attach(part)
+        # Attach Excel file if provided
+        if attachment_path:
+            with open(attachment_path, 'rb') as attachment:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(attachment.read())
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(attachment_path)}"')
+                msg.attach(part)
 
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.sendmail(SMTP_USERNAME, receiver_email, msg.as_string())
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(SMTP_USERNAME, receiver_email, msg.as_string())
+    except smtplib.SMTPAuthenticationError as e:
+        # Handle the case where credentials are outdated
+        bot.send_message(chat_id=CHAT_TEST, text='Please update your credentials of OCR BOT.He cant send emails at the moment')
+
+
 
 def ocr_space_file(filename, overlay=False, api_key=OCR_API, language='eng'):
     """
@@ -131,7 +138,7 @@ def handle_document(message):
 
     except Exception as e:
         print(f"Error processing document: {e}")
-        bot.reply_to(message, "Error processing document. Please try again.")
+        bot.reply_to(message, "Error processing document. Please try again later.")
 
 
     finally:
@@ -145,4 +152,3 @@ def handle_document(message):
 if __name__ == '__main__':
     bot_thread = threading.Thread(target=start_bot)
     bot_thread.start()
-    bot_thread.join()
