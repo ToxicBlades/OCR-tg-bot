@@ -1,7 +1,7 @@
 import pytesseract
 from PIL import Image, ImageFilter, ImageEnhance
 
-from preprocess import preprocess_image
+from ocr_i_tested.preprocess import preprocess_image
 # Path to tesseract executable
 # For Windows, it's usually something like 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
