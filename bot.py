@@ -109,8 +109,4 @@ def handle_document_message(message):
     handle_document(message)
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     bot.polling(none_stop=True)
-=======
-    bot.polling(none_stop=True)
->>>>>>> 0b963a5aaf1b691b8474ec7131ea7246be8d5444
