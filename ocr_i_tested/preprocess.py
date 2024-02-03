@@ -58,6 +58,9 @@ def preprocess_image(image_path):
     image = get_grayscale(image)
     image = thresholding(image)
 
+    # preprocessed_image_path = 'preprocessed_image.jpg'
+    # cv2.imwrite(preprocessed_image_path, image)
+    # return preprocessed_image_path
 
     return image
 

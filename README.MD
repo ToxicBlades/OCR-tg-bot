@@ -1,8 +1,6 @@
 # This is small OCR using Tesseract
 
-## The main solution is to automize processing of visit cards which company recieves on exhibitions
-
-At the moment this code preprocess image before extracting text, extract text and then send it to users
+Its used atm to create a telegram bot which will recive photo from user and then recognise text from it and then send it back to user
 
 ## Preprocessing
 
