@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import telebot
 from telebot import types
 from config import OCR_API, TESTBOTKEY, SMTP_MAIL , SMTP_PASS, CHAT_TEST, WHITE_LIST
@@ -15,14 +16,11 @@ TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
 # Predefined Excel file details
 PREDEFINED_EXCEL_FILENAME = "test.xlsx"
-
-
 # Gmail SMTP settings
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USERNAME = SMTP_MAIL
 SMTP_PASSWORD = SMTP_PASS
-
 
 def start_bot():
     """
@@ -39,7 +37,6 @@ def start_bot():
         time.sleep(30)
         start_bot()
 
-
 def extract_email_from_ocr_result(ocr_result):
     if not isinstance(ocr_result, str):
         raise TypeError("Input must be a string")
@@ -51,7 +48,6 @@ def extract_email_from_ocr_result(ocr_result):
         return match.group()
     else:
         return None
-
 
 def send_email(receiver_email, attachment_path=None):
     """
@@ -82,8 +78,6 @@ def send_email(receiver_email, attachment_path=None):
     except smtplib.SMTPAuthenticationError as e:
         # Handle the case where credentials are outdated
         bot.send_message(chat_id=CHAT_TEST, text='Please update your credentials of OCR BOT.He cant send emails at the moment')
-
-
 
 def ocr_space_file(filename, overlay=False, api_key=OCR_API, language='eng'):
     """
@@ -189,7 +183,6 @@ def handle_change_credentials(message):
 
     bot.send_message(chat_id, "Выберите опцию:", reply_markup=keyboard)
 
-
 @bot.message_handler(func=lambda message: message.text in ['Change Password', 'Change Email', 'Cancel'])
 def handle_change_credentials_choice(message):
     """
@@ -214,7 +207,6 @@ def handle_change_credentials_choice(message):
 
     else:
         bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
-
 
 def process_new_value(message, credential_type):
     """
@@ -243,7 +235,6 @@ def process_new_value(message, credential_type):
 
     except Exception as e:
         bot.reply_to(message, f"An error occurred: {e}")
-
 
 if __name__ == '__main__':
     bot_thread = threading.Thread(target=start_bot)

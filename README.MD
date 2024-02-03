@@ -13,6 +13,6 @@
 
 1. OCR PHOTO ✅
 2. Send standart/special excel
-3. Change password(gmail pass) or email if you know special password
+3. Change password(gmail pass) or email if you know special password ✅
 4. Change standart excel file if you know special password
 5. Change set of special excel files if you know special password
