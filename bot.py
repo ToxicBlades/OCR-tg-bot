@@ -24,6 +24,12 @@ SMTP_PASSWORD = SMTP_PASS
 
 
 def start_bot():
+    """
+    The main scope of this function is to put it on thread
+    so bot never stop working if he ison server.
+    If interenet shots down for a second bot will die,
+    but in 30 seconds this function will recover him
+    """
     try:
         bot.polling(True)
     except Exception as e:
@@ -34,7 +40,9 @@ def start_bot():
 
 
 def extract_email_from_ocr_result(ocr_result):
-    # Use regular expression to find and extract email address
+    """
+    Using pattern re which helps to find word which contains @ (email)
+    """
     email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     match = re.search(email_pattern, ocr_result)
 
@@ -44,6 +52,11 @@ def extract_email_from_ocr_result(ocr_result):
         return None
 
 def send_email(receiver_email, attachment_path=None):
+    """
+    Connecting to gmail smtp using email and app password
+    Adding attachment if provided
+    And then send email with prededicated text, subject.
+    """
     msg = MIMEMultipart()
     msg['From'] = SMTP_USERNAME
     msg['To'] = receiver_email
@@ -65,6 +78,12 @@ def send_email(receiver_email, attachment_path=None):
         server.sendmail(SMTP_USERNAME, receiver_email, msg.as_string())
 
 def ocr_space_file(filename, overlay=False, api_key=OCR_API, language='eng'):
+    """
+    Calling to ocr space api for OCR
+    API_KEY should be in your .env or config.py
+    language parameter allows you to chose which lang you need to ocr(can be auto)
+    You can see whole response deleting parsed_text variable and just print result
+    """
     payload = {'isOverlayRequired': overlay,
                'apikey': api_key,
                'language': language,
@@ -79,7 +98,13 @@ def ocr_space_file(filename, overlay=False, api_key=OCR_API, language='eng'):
     parsed_text = result_json['ParsedResults'][0]['ParsedText']
     return parsed_text
 
+@bot.message_handler(content_types=['document'])
 def handle_document(message):
+    """
+    Simple function where we download doccument by its id.
+    Then OCR it send our result to chat
+    Sending an email after
+    """
     try:
         # Get the file ID of the document
         file_id = message.document.file_id
@@ -116,14 +141,8 @@ def handle_document(message):
         except Exception as e:
             print(f"Error deleting document file: {e}")
 
-@bot.message_handler(content_types=['document'])
-def handle_document_message(message):
-    handle_document(message)
 
 if __name__ == '__main__':
     bot_thread = threading.Thread(target=start_bot)
-
-
-    bot_thread.start()  # Запускаем бота в отдельном потоке
-
-    bot_thread.join()  #
+    bot_thread.start()
+    bot_thread.join()
