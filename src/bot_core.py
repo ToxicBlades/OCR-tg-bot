@@ -16,7 +16,9 @@ WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
 
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
-PREDEFINED_EXCEL_FILENAME = "..//data/test.xlsx"
+PREDEFINED_EXCEL_FILENAME = "./data/test.xlsx"
+user_states = {}  # Tracks the current action/state of each user
+
 
 def start_bot():
     try:
@@ -27,11 +29,86 @@ def start_bot():
         time.sleep(30)
         start_bot()
 
+
+def process_new_value(message, credential_type):
+    """
+    Function to process the new value entered by the user and update the config.
+    """
+    chat_id = message.chat.id
+    new_value = message.text.strip()
+
+
+    try:
+        with open('.env', 'r') as config_file:
+            config_content = config_file.read()
+
+        if credential_type == 'change_password':
+            config_content = re.sub(r'SMTP_PASS\s*=\s*["\'].+["\']', f'SMTP_PASS = "{new_value}"', config_content)
+        elif credential_type == 'change_email':
+            config_content = re.sub(r'SMTP_MAIL\s*=\s*["\'].+["\']', f'SMTP_MAIL = "{new_value}"', config_content)
+        else:
+            bot.reply_to(message, "Invalid credential type. Please use change_password or change_email.")
+            return
+
+        with open('.env', 'w') as config_file:
+            config_file.write(config_content)
+
+        bot.reply_to(message, f"{credential_type.replace('_', ' ')} прошло успешно.")
+
+    except Exception as e:
+        bot.reply_to(message, f"An error occurred: {e}")
+
+def process_ocr_document(message):
+    try:
+            # Get the file ID of the document
+            file_id = message.document.file_id
+
+            # Download the document
+            file_info = bot.get_file(file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+
+            # Save the document
+            document_filename = f"temp_document_{file_id}.jpg"
+            with open(document_filename, 'wb') as new_file:
+                new_file.write(downloaded_file)
+
+            # Perform OCR on the saved document
+            ocr_result = ocr_space_file(document_filename)
+
+            # Send the OCR result back to the user
+            bot.reply_to(message, f"OCR Result:\n{ocr_result}")
+
+            # Send an email with
+            receiver_email = extract_email_from_ocr_result(ocr_result)
+            excel_attachment_path = PREDEFINED_EXCEL_FILENAME
+            send_email(bot, receiver_email, attachment_path=excel_attachment_path)
+
+    except Exception as e:
+            print(f"Error processing document: {e}")
+            bot.reply_to(message, "Error processing document. Please try again later.")
+    finally:
+        try:
+            os.remove(document_filename)
+        except Exception as e:
+            print(f"Error deleting document file: {e}")
+
+def process_excel_document(message):
+    try:
+        file_info = bot.get_file(message.document.file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        save_path = PREDEFINED_EXCEL_FILENAME
+
+        with open(save_path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+        bot.reply_to(message, "Эксель файл успешно обновлён.")
+    except Exception as e:
+            bot.reply_to(message, f"Не получилось установить эксель,попробойти позже: {e}")
+
+
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     chat_id = message.chat.id
-    bot.send_message(chat_id,f'your chat id is {chat_id}')
-    bot.send_message(chat_id,f'your chat id is {WHITE_LIST}')
+    #bot.send_message(chat_id,f'your chat id is {chat_id}')
     bot.reply_to(message, "Это OCR бот который распознает вашу визику и отправит фоллоу ап для вашего клиента. отправляйте мне только файлы")
 
 @bot.message_handler(content_types=['document'])
@@ -41,41 +118,14 @@ def handle_document(message):
     Then OCR it send our result to chat
     Sending an email after
     """
-    try:
-        # Get the file ID of the document
-        file_id = message.document.file_id
-
-        # Download the document
-        file_info = bot.get_file(file_id)
-        downloaded_file = bot.download_file(file_info.file_path)
-
-        # Save the document
-        document_filename = f"temp_document_{file_id}.jpg"
-        with open(document_filename, 'wb') as new_file:
-            new_file.write(downloaded_file)
-
-        # Perform OCR on the saved document
-        ocr_result = ocr_space_file(document_filename)
-
-        # Send the OCR result back to the user
-        bot.reply_to(message, f"OCR Result:\n{ocr_result}")
-
-        # Send an email with
-        receiver_email = extract_email_from_ocr_result(ocr_result)
-        excel_attachment_path = PREDEFINED_EXCEL_FILENAME
-        send_email(bot, receiver_email, attachment_path=excel_attachment_path)
-
-    except Exception as e:
-        print(f"Error processing document: {e}")
-        bot.reply_to(message, "Error processing document. Please try again later.")
-
-
-    finally:
-        # Delete the temporary file
-        try:
-            os.remove(document_filename)
-        except Exception as e:
-            print(f"Error deleting document file: {e}")
+    chat_id = message.chat.id
+    current_state = user_states.get(chat_id)
+    if current_state == 'change_excel':
+        process_excel_document(message)
+        user_states[chat_id] = None
+    else:
+        process_ocr_document(message)
+        user_states[chat_id] = None
 
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
@@ -132,31 +182,13 @@ def handle_change_credentials_choice(message):
     else:
         bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
 
-def process_new_value(message, credential_type):
-    """
-    Function to process the new value entered by the user and update the config.
-    """
+
+@bot.message_handler(commands=['change_excel'])
+def handle_change_excel(message):
     chat_id = message.chat.id
-    new_value = message.text.strip()
-
-
-    try:
-        with open('.env', 'r') as config_file:
-            config_content = config_file.read()
-
-        if credential_type == 'change_password':
-            config_content = re.sub(r'SMTP_PASS\s*=\s*["\'].+["\']', f'SMTP_PASS = "{new_value}"', config_content)
-        elif credential_type == 'change_email':
-            config_content = re.sub(r'SMTP_MAIL\s*=\s*["\'].+["\']', f'SMTP_MAIL = "{new_value}"', config_content)
-        else:
-            bot.reply_to(message, "Invalid credential type. Please use change_password or change_email.")
-            return
-
-        with open('.env', 'w') as config_file:
-            config_file.write(config_content)
-
-        bot.reply_to(message, f"{credential_type.replace('_', ' ')} прошло успешно.")
-
-    except Exception as e:
-        bot.reply_to(message, f"An error occurred: {e}")
-
+    # Here, add your authorization check if needed
+    if chat_id in WHITE_LIST:
+        user_states[chat_id] = 'change_excel'
+        bot.send_message(chat_id, "Please upload the new Excel file.")
+    else:
+        bot.reply_to(message, "You are not authorized to perform this action.")
