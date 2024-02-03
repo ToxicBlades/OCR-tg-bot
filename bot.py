@@ -148,6 +148,21 @@ def handle_document(message):
         except Exception as e:
             print(f"Error deleting document file: {e}")
 
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    """
+    Function to handle the /start command.
+    Sends a welcome message to the user.
+    """
+    bot.reply_to(message, "Это OCR бот который распознает вашу визику и отправит фоллоу ап для вашего клиента. отправляйте мне только файлы")
+
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+    """
+    Function to handle when a user sends a photo.
+    Replies with a message asking the user to send a document instead.
+    """
+    bot.reply_to(message, "Пожалуйста отправьте мне фото как доккумент.")
 
 if __name__ == '__main__':
     bot_thread = threading.Thread(target=start_bot)
