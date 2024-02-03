@@ -1,20 +1,18 @@
-# This is small OCR using Tesseract
+# Telegram Bot OCR
 
-Its used atm to create a telegram bot which will recive photo from user and then recognise text from it and then send it back to user
+## User Guide and Main Scopes
 
-## Preprocessing
+1. User send photo as file to bot(business cards)
+2. Bot OCR text from image and extract it
+3. Chat-gpt transform this text into json
+4. Api call to amo-crm which create new lead and put task on manager
+5. User select is it standart follow up or special
+6. auto-send follow-up(standart/special) with excel file to email which is on photo
 
-1. First step - Normalization <br />
-   This process changes the range of pixel intensity values. The purpose of performing normalization is to bring image to range that is normal to sense. OpenCV uses normalize () function for the image normalization.
-2. Second step - Skew Correction <br />
-   While scanning or taking a picture of any document, it is possible that the scanned or captured image might be slightly skewed sometimes. For the better performance of the OCR, it is good to determine the skewness in image and correct it.
-3. Third Step - Image Scaling <br />
-   To achieve a better performance of OCR, the image should have more than 300 PPI (pixel per inch). So, if the image size is less than 300 PPI, we need to increase it. We can use the Pillow library for this.
-4. Fourth step - Noise Removal <br />
-   This step removes the small dots/patches which have high intensity compared to the rest of the image for smoothening of the image. OpenCV’s fast Nl Means Denoising Coloured function can do that easily.
-5. Fifth step - Thinning and Skeletonization <br />
-   This step is performed for the handwritten text, as different writers use different stroke widths to write. This step makes the width of strokes uniform. This can be done in OpenCV
-6. Sixth - Gray Scale image <br />
-   This process converts an image from other color spaces to shades of Gray. The colour varies between complete black and complete white. OpenCV’s cvtColor() function perform this task very easily
-7. Seventh step - Thresholding or Binarization <br />
-   This step converts any colored image into a binary image that contains only two colors black and white. It is done by fixing a threshold (normally half of the pixel range 0-255, i.e., 127). The pixel value having greater than the threshold is converted into a white pixel else into a black pixel. To determine the threshold value according to the image Otsu’s Binarization and Adaptive Binarization can be a better choice. In OpenCV, this can be done as given.
+## Functionality (Im only working on it will put ✅ when done)
+
+1. OCR PHOTO ✅
+2. Send standart/special excel
+3. Change password(gmail pass) or email if you know special password
+4. Change standart excel file if you know special password
+5. Change set of special excel files if you know special password
