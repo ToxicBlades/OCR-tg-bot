@@ -8,6 +8,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import re
+import threading
+import time
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
 # Predefined Excel file details
@@ -19,6 +21,16 @@ SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USERNAME = SMTP_MAIL
 SMTP_PASSWORD = SMTP_PASS
+
+
+def start_bot():
+    try:
+        bot.polling(True)
+    except Exception as e:
+        print(f"An error occurred while running the bot: {e}")
+        print("Restarting the bot...")
+        time.sleep(30)
+        start_bot()
 
 
 def extract_email_from_ocr_result(ocr_result):
@@ -108,5 +120,10 @@ def handle_document(message):
 def handle_document_message(message):
     handle_document(message)
 
-if __name__ == "__main__":
-    bot.polling(none_stop=True)
+if __name__ == '__main__':
+    bot_thread = threading.Thread(target=start_bot)
+
+
+    bot_thread.start()  # Запускаем бота в отдельном потоке
+
+    bot_thread.join()  #
