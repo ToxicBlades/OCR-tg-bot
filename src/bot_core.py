@@ -1,34 +1,24 @@
 # -*- coding: utf-8 -*-
 import telebot
 from telebot import types
-from config import OCR_API, TESTBOTKEY, SMTP_MAIL , SMTP_PASS, CHAT_TEST, WHITE_LIST
-import requests
+from email_utils import send_email
+from ocr_utils import ocr_space_file, extract_email_from_ocr_result
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-import re
-import threading
 import time
+import re
+
+from dotenv import load_dotenv
+load_dotenv()
+TESTBOTKEY = os.getenv("TESTBOTKEY")
+CHAT_TEST = os.getenv("CHAT_TEST")
+WHITE_LIST = os.getenv("WHITE_LIST")
+WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
+
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
-# Predefined Excel file details
-PREDEFINED_EXCEL_FILENAME = "test.xlsx"
-# Gmail SMTP settings
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USERNAME = SMTP_MAIL
-SMTP_PASSWORD = SMTP_PASS
+PREDEFINED_EXCEL_FILENAME = "..//data/test.xlsx"
 
 def start_bot():
-    """
-    The main scope of this function is to put it on thread
-    so bot never stop working if he ison server.
-    If interenet shots down for a second bot will die,
-    but in 30 seconds this function will recover him
-    """
     try:
         bot.polling(True)
     except Exception as e:
@@ -37,68 +27,12 @@ def start_bot():
         time.sleep(30)
         start_bot()
 
-def extract_email_from_ocr_result(ocr_result):
-    if not isinstance(ocr_result, str):
-        raise TypeError("Input must be a string")
-
-    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    match = re.search(email_pattern, ocr_result)
-
-    if match:
-        return match.group()
-    else:
-        return None
-
-def send_email(receiver_email, attachment_path=None):
-    """
-    Connecting to gmail smtp using email and app password
-    Adding attachment if provided
-    And then send email with prededicated text, subject.
-    """
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = SMTP_USERNAME
-        msg['To'] = receiver_email
-        msg['Subject'] = 'This is sam global trading'
-        msg.attach(MIMEText('This is our offers to you', 'plain'))
-
-        # Attach Excel file if provided
-        if attachment_path:
-            with open(attachment_path, 'rb') as attachment:
-                part = MIMEBase('application', 'octet-stream')
-                part.set_payload(attachment.read())
-                encoders.encode_base64(part)
-                part.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(attachment_path)}"')
-                msg.attach(part)
-
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.sendmail(SMTP_USERNAME, receiver_email, msg.as_string())
-    except smtplib.SMTPAuthenticationError as e:
-        # Handle the case where credentials are outdated
-        bot.send_message(chat_id=CHAT_TEST, text='Please update your credentials of OCR BOT.He cant send emails at the moment')
-
-def ocr_space_file(filename, overlay=False, api_key=OCR_API, language='eng'):
-    """
-    Calling to ocr space api for OCR
-    API_KEY should be in your .env or config.py
-    language parameter allows you to chose which lang you need to ocr(can be auto)
-    You can see whole response deleting parsed_text variable and just print result
-    """
-    payload = {'isOverlayRequired': overlay,
-               'apikey': api_key,
-               'language': language,
-               }
-    with open(filename, 'rb') as f:
-        r = requests.post('https://api.ocr.space/parse/image',
-                          files={filename: f},
-                          data=payload,
-                          )
-
-    result_json = r.json()
-    parsed_text = result_json['ParsedResults'][0]['ParsedText']
-    return parsed_text
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    chat_id = message.chat.id
+    bot.send_message(chat_id,f'your chat id is {chat_id}')
+    bot.send_message(chat_id,f'your chat id is {WHITE_LIST}')
+    bot.reply_to(message, "Это OCR бот который распознает вашу визику и отправит фоллоу ап для вашего клиента. отправляйте мне только файлы")
 
 @bot.message_handler(content_types=['document'])
 def handle_document(message):
@@ -129,7 +63,7 @@ def handle_document(message):
         # Send an email with
         receiver_email = extract_email_from_ocr_result(ocr_result)
         excel_attachment_path = PREDEFINED_EXCEL_FILENAME
-        send_email(receiver_email, attachment_path=excel_attachment_path)
+        send_email(bot, receiver_email, attachment_path=excel_attachment_path)
 
     except Exception as e:
         print(f"Error processing document: {e}")
@@ -142,16 +76,6 @@ def handle_document(message):
             os.remove(document_filename)
         except Exception as e:
             print(f"Error deleting document file: {e}")
-
-@bot.message_handler(commands=['start'])
-def handle_start(message):
-    """
-    Function to handle the /start command.
-    Sends a welcome message to the user.
-    """
-    chat_id = message.chat.id
-    bot.send_message(chat_id,f'your chat id is {chat_id}')
-    bot.reply_to(message, "Это OCR бот который распознает вашу визику и отправит фоллоу ап для вашего клиента. отправляйте мне только файлы")
 
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
@@ -215,9 +139,9 @@ def process_new_value(message, credential_type):
     chat_id = message.chat.id
     new_value = message.text.strip()
 
-    # Update the corresponding credential in config.py
+
     try:
-        with open('config.py', 'r') as config_file:
+        with open('.env', 'r') as config_file:
             config_content = config_file.read()
 
         if credential_type == 'change_password':
@@ -228,7 +152,7 @@ def process_new_value(message, credential_type):
             bot.reply_to(message, "Invalid credential type. Please use change_password or change_email.")
             return
 
-        with open('config.py', 'w') as config_file:
+        with open('.env', 'w') as config_file:
             config_file.write(config_content)
 
         bot.reply_to(message, f"{credential_type.replace('_', ' ')} прошло успешно.")
@@ -236,6 +160,3 @@ def process_new_value(message, credential_type):
     except Exception as e:
         bot.reply_to(message, f"An error occurred: {e}")
 
-if __name__ == '__main__':
-    bot_thread = threading.Thread(target=start_bot)
-    bot_thread.start()
