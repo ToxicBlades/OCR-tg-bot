@@ -21,7 +21,7 @@ PREDEFINED_EXCEL_FILENAME = "./data/test.xlsx"
 
 user_states = {}  # Tracks the current action/state of each user
 user_ocr_results = {} # track data of OCR results for current user
-
+user_changes = {} #To save old data if people missclicked and do not want to make changes
 def start_bot():
     try:
         bot.polling(True)
@@ -83,12 +83,12 @@ def process_ocr_document(message):
             user_states[chat_id] = 'change_ocr_data'
 
             markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
-            confirm_button = types.KeyboardButton("Confirm")
-            change_button =types. KeyboardButton("Change")
+            confirm_button = types.KeyboardButton("Подтвердить")
+            change_button =types. KeyboardButton("Изменить")
             markup.add(confirm_button, change_button)
 
             bot.reply_to(message, "OCR Result:\n" + process_ai(ocr_result), reply_markup=markup)
-            bot.send_message(message.chat.id, "Do you want to confirm or make changes?", reply_markup=markup)
+            bot.send_message(message.chat.id, "Вы хотите подтвердить или изменить ответ?", reply_markup=markup)
 
     except Exception as e:
         print(f"Error processing document: {e}")
@@ -99,23 +99,47 @@ def process_ocr_document(message):
         except Exception as e:
             print(f"Error deleting document file: {e}")
 
-@bot.message_handler(func=lambda message: message.text.lower() == 'change' or message.text.lower() == 'confirm')
+@bot.message_handler(func=lambda message: message.text.lower() == 'изменить' or message.text.lower() == 'подветрдить')
 def handle_review_response(message):
     chat_id = message.chat.id
     current_state = user_states.get(chat_id)
     if current_state == 'change_ocr_data':
         ocr_result = user_ocr_results.get(chat_id)
-        if message.text.lower() == 'change':
-            # Handle the case where the user wants to make changes to the OCR result
-            # You can provide instructions or take appropriate actions here
-            bot.send_message(message.chat.id, "You chose to make changes. Please specify the changes you want to make.")
-            # Implement logic to allow the user to edit and update the OCR result
+        if message.text.lower() == 'изменить':
+            bot.send_message(message.chat.id, "Пожалуйста скопируйте ответ и внесите изменения.Если вы не хотите вносить изменения и сразу отправить напишите отмена")
+            user_changes[chat_id] = ocr_result  # Store the original OCR result for reference
+            bot.register_next_step_handler(message, process_changes)
         else:
             receiver_email = extract_email_from_ocr_result(ocr_result)
             excel_attachment_path = PREDEFINED_EXCEL_FILENAME
             send_email(bot, receiver_email, attachment_path=excel_attachment_path)
             user_states[chat_id] = None
 
+def process_changes(message):
+    chat_id = message.chat.id
+    ocr_result = user_changes.get(chat_id)
+
+    if ocr_result:
+        if message.text.lower() == 'отмена':
+            # Cancel the change process
+            bot.reply_to(message, "Процесс изменения отменён.")
+            handle_review_response(message)
+        else:
+            # Handle the user's input as the modified OCR result
+            modified_ocr_result = message.text
+            user_ocr_results[chat_id] = modified_ocr_result
+
+            markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+            confirm_button = types.KeyboardButton("Подтвердить")
+            change_button =types. KeyboardButton("Изменить")
+            user_states[chat_id] = 'change_ocr_data'
+            markup.add(confirm_button, change_button)
+
+            bot.send_message(message.chat.id, "Измененный текст:\n" + modified_ocr_result, reply_markup=markup)
+            bot.send_message(message.chat.id, "Вы хотите подтвердить или изменить ответ?", reply_markup=markup)
+            bot.register_next_step_handler(message, handle_review_response)
+    else:
+        bot.reply_to(message, "No original OCR result found for changes.")
 
 def process_excel_document(message):
     try:
