@@ -3,6 +3,7 @@ import telebot
 from telebot import types
 from email_utils import send_email
 from ocr_utils import ocr_space_file, extract_email_from_ocr_result
+from gpt_text_to_json import process_ai
 import os
 import time
 import re
@@ -32,7 +33,7 @@ def start_bot():
 
 def process_new_value(message, credential_type):
     """
-    Function to process the new value entered by the user and update the config.
+    Function to process the new value entered by the user and update the .env
     """
     chat_id = message.chat.id
     new_value = message.text.strip()
@@ -59,6 +60,7 @@ def process_new_value(message, credential_type):
         bot.reply_to(message, f"An error occurred: {e}")
 
 def process_ocr_document(message):
+
     try:
             # Get the file ID of the document
             file_id = message.document.file_id
@@ -75,8 +77,10 @@ def process_ocr_document(message):
             # Perform OCR on the saved document
             ocr_result = ocr_space_file(document_filename)
 
+            json_text = process_ai(ocr_result)
+
             # Send the OCR result back to the user
-            bot.reply_to(message, f"OCR Result:\n{ocr_result}")
+            bot.reply_to(message, f"OCR Result:\n{ocr_result}\n{json_text}")
 
             # Send an email with
             receiver_email = extract_email_from_ocr_result(ocr_result)
