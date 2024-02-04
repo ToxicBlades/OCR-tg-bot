@@ -106,7 +106,7 @@ def handle_review_response(message):
     if current_state == 'change_ocr_data':
         ocr_result = user_ocr_results.get(chat_id)
         if message.text.lower() == 'изменить':
-            bot.send_message(message.chat.id, "Пожалуйста скопируйте ответ и внесите изменения.Если вы не хотите вносить изменения и сразу отправить напишите отмена")
+            bot.send_message(message.chat.id, "Пожалуйста скопируйте ответ в {{}} и внесите изменения.Если вы не хотите вносить изменения и сразу отправить напишите отмена")
             user_changes[chat_id] = ocr_result  # Store the original OCR result for reference
             bot.register_next_step_handler(message, process_changes)
         else:
