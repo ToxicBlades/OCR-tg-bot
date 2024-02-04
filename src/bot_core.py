@@ -18,8 +18,9 @@ WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
 PREDEFINED_EXCEL_FILENAME = "./data/test.xlsx"
-user_states = {}  # Tracks the current action/state of each user
 
+user_states = {}  # Tracks the current action/state of each user
+user_ocr_results = {} # track data of OCR results for current user
 
 def start_bot():
     try:
@@ -76,25 +77,45 @@ def process_ocr_document(message):
 
             # Perform OCR on the saved document
             ocr_result = ocr_space_file(document_filename)
+            # Store the OCR result for the user
+            chat_id = message.chat.id
+            user_ocr_results[chat_id] = ocr_result
+            user_states[chat_id] = 'change_ocr_data'
 
-            json_text = process_ai(ocr_result)
+            markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+            confirm_button = types.KeyboardButton("Confirm")
+            change_button =types. KeyboardButton("Change")
+            markup.add(confirm_button, change_button)
 
-            # Send the OCR result back to the user
-            bot.reply_to(message, f"OCR Result:\n{ocr_result}\n{json_text}")
-
-            # Send an email with
-            receiver_email = extract_email_from_ocr_result(ocr_result)
-            excel_attachment_path = PREDEFINED_EXCEL_FILENAME
-            send_email(bot, receiver_email, attachment_path=excel_attachment_path)
+            bot.reply_to(message, "OCR Result:\n" + process_ai(ocr_result), reply_markup=markup)
+            bot.send_message(message.chat.id, "Do you want to confirm or make changes?", reply_markup=markup)
 
     except Exception as e:
-            print(f"Error processing document: {e}")
-            bot.reply_to(message, "Error processing document. Please try again later.")
+        print(f"Error processing document: {e}")
+        bot.reply_to(message, "Error processing document. Please try again later.")
     finally:
         try:
             os.remove(document_filename)
         except Exception as e:
             print(f"Error deleting document file: {e}")
+
+@bot.message_handler(func=lambda message: message.text.lower() == 'change' or message.text.lower() == 'confirm')
+def handle_review_response(message):
+    chat_id = message.chat.id
+    current_state = user_states.get(chat_id)
+    if current_state == 'change_ocr_data':
+        ocr_result = user_ocr_results.get(chat_id)
+        if message.text.lower() == 'change':
+            # Handle the case where the user wants to make changes to the OCR result
+            # You can provide instructions or take appropriate actions here
+            bot.send_message(message.chat.id, "You chose to make changes. Please specify the changes you want to make.")
+            # Implement logic to allow the user to edit and update the OCR result
+        else:
+            receiver_email = extract_email_from_ocr_result(ocr_result)
+            excel_attachment_path = PREDEFINED_EXCEL_FILENAME
+            send_email(bot, receiver_email, attachment_path=excel_attachment_path)
+            user_states[chat_id] = None
+
 
 def process_excel_document(message):
     try:
@@ -129,7 +150,7 @@ def handle_document(message):
         user_states[chat_id] = None
     else:
         process_ocr_document(message)
-        user_states[chat_id] = None
+        #no need to put states to none because its inside proccesing while confirm or make changes
 
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
