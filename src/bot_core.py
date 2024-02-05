@@ -7,6 +7,7 @@ from gpt_text_to_json import process_ai
 import os
 import time
 import re
+import json
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -14,7 +15,7 @@ TESTBOTKEY = os.getenv("TESTBOTKEY")
 CHAT_TEST = os.getenv("CHAT_TEST")
 WHITE_LIST = os.getenv("WHITE_LIST")
 WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
-
+JSON_FILE_PATH = './data/text.json'
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
 PREDEFINED_EXCEL_FILENAME = "./data/main_follow.xlsx"
@@ -31,6 +32,19 @@ def start_bot():
         time.sleep(30)
         start_bot()
 
+def save_to_json(message):
+    try:
+        # Преобразовываем входной JSON-текст в словарь
+        data = json.loads(message.text)
+
+        # Записываем данные в файл JSON
+        with open(JSON_FILE_PATH, 'w', encoding='utf-8') as json_file:
+            json.dump(data, json_file, ensure_ascii=False, indent=2)
+
+        bot.send_message(message.chat.id, "Текст и тема для писем была обновленна")
+
+    except json.JSONDecodeError as e:
+        print(f"Ошибка декодирования JSON: {e}, попробуйте позже")
 
 def process_new_value(message, credential_type):
     """
@@ -234,6 +248,51 @@ def handle_change_credentials_choice(message):
             bot.send_message(chat_id, f"Пожалуйста введите новое значение:")
             bot.register_next_step_handler(message, lambda msg: process_new_value(msg, credential_type))
 
+        else:
+            bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
+
+@bot.message_handler(commands=['change_mail_text'])
+def handle_mail_text(message):
+    """
+    Function to handle the /change_mail_text command.
+    Allows the user to change (text.json) text and theme of text which will sended in mail.
+    """
+    chat_id = message.chat.id
+
+    # Check if the user is authorized to change credentials (optional)
+    authorized_users = WHITE_LIST # Add authorized chat IDs
+    if chat_id not in authorized_users:
+        bot.reply_to(message, "Вы не авторизованны чтобы изменять данные.")
+        return
+    user_states[chat_id] = 'change_mail_text'
+
+    # Display three buttons
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    change_text_button = types.KeyboardButton('Change text')
+    cancel_button = types.KeyboardButton('Cancel changing')
+    keyboard.add(change_text_button, cancel_button)
+
+    bot.send_message(chat_id, "Выберите опцию:", reply_markup=keyboard)
+
+@bot.message_handler(func=lambda message: message.text.lower() in ['change text', 'cancel changing'])
+def handle_change_credentials_choice(message):
+    """
+    Function to handle user's choice after displaying buttons.
+    """
+    chat_id = message.chat.id
+    current_state = user_states.get(chat_id)
+    if current_state == 'change_mail_text':
+
+        if message.text.lower() == 'cancel changing':
+            bot.reply_to(message, "Операция отменена.")
+            user_states[chat_id] = None
+            return
+        elif message.text.lower()=='change text':
+             # Ask the user for the new value
+            user_states[chat_id] = None
+            bot.send_message(chat_id, 'Пожалуйста введите новый текст в таком же формате как и старый {{"text":"тут ваш текст где имя компании company_name, имя клиента  client_name, товар product_name","theme":"тут ваша тема"}}:')
+            bot.register_next_step_handler(message, lambda msg: save_to_json(msg))
+            return
         else:
             bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
 
