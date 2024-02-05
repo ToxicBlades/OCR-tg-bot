@@ -17,7 +17,7 @@ WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
 
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
-PREDEFINED_EXCEL_FILENAME = "./data/test.xlsx"
+PREDEFINED_EXCEL_FILENAME = "./data/main_follow.xlsx"
 
 user_states = {}  # Tracks the current action/state of each user
 user_ocr_results = {} # track data of OCR results for current user
