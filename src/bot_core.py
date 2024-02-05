@@ -197,6 +197,8 @@ def handle_change_credentials(message):
     if chat_id not in authorized_users:
         bot.reply_to(message, "Вы не авторизованны чтобы изменять данные.")
         return
+    user_states[chat_id] = 'change_credentials'
+
     # Display three buttons
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     change_pass_button = types.KeyboardButton('Change Password')
@@ -206,30 +208,34 @@ def handle_change_credentials(message):
 
     bot.send_message(chat_id, "Выберите опцию:", reply_markup=keyboard)
 
-@bot.message_handler(func=lambda message: message.text in ['Change Password', 'Change Email', 'Cancel'])
+@bot.message_handler(func=lambda message: message.text.lower() in ['change password', 'change email', 'cancel'])
 def handle_change_credentials_choice(message):
     """
     Function to handle user's choice after displaying buttons.
     """
     chat_id = message.chat.id
+    current_state = user_states.get(chat_id)
+    if current_state == 'change_credentials':
 
-    if message.text == 'Cancel':
-        bot.reply_to(message, "Операция отменена.")
-        return
+        if message.text.lower() == 'cancel':
+            bot.reply_to(message, "Операция отменена.")
+            user_states[chat_id] = None
+            return
 
-    # Get the command parameters
-    credential_type = message.text.lower().replace(' ', '_')
+        # Get the command parameters
+        credential_type = message.text.lower().replace(' ', '_')
 
-    # Handle the chosen option accordingly
-    if credential_type in ['change_password', 'change_email']:
-        bot.reply_to(message, f"Вы выбрали:  {credential_type.replace('_', ' ')}.")
+        # Handle the chosen option accordingly
+        if credential_type in ['change_password', 'change_email']:
+            bot.reply_to(message, f"Вы выбрали:  {credential_type.replace('_', ' ')}.")
 
-        # Ask the user for the new value
-        bot.send_message(chat_id, f"Пожалуйста введите новое значение:")
-        bot.register_next_step_handler(message, lambda msg: process_new_value(msg, credential_type))
+            # Ask the user for the new value
+            user_states[chat_id] = None
+            bot.send_message(chat_id, f"Пожалуйста введите новое значение:")
+            bot.register_next_step_handler(message, lambda msg: process_new_value(msg, credential_type))
 
-    else:
-        bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
+        else:
+            bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
 
 
 @bot.message_handler(commands=['change_excel'])
