@@ -120,7 +120,7 @@ def handle_review_response(message):
     if current_state == 'change_ocr_data':
         ocr_result = user_ocr_results.get(chat_id)
         if message.text.lower() == 'изменить':
-            bot.send_message(message.chat.id, "Пожалуйста скопируйте ответ в {{}} и внесите изменения.Если вы не хотите вносить изменения и сразу отправить напишите отмена")
+            bot.send_message(message.chat.id, 'Пожалуйста скопируйте ответ в {} и внесите изменения.Если вы не хотите вносить изменения и сразу отправить напишите отмена')
             user_changes[chat_id] = ocr_result  # Store the original OCR result for reference
             bot.register_next_step_handler(message, process_changes)
         else:
@@ -290,7 +290,7 @@ def handle_change_credentials_choice(message):
         elif message.text.lower()=='change text':
              # Ask the user for the new value
             user_states[chat_id] = None
-            bot.send_message(chat_id, 'Пожалуйста введите новый текст в таком же формате как и старый {{"text":"тут ваш текст где имя компании company_name, имя клиента  client_name, товар product_name","theme":"тут ваша тема"}}:')
+            bot.send_message(chat_id, 'Пожалуйста введите новый текст в таком же формате как и старый {"text":"тут ваш текст где имя компании company_name, имя клиента  client_name, товар product_name","theme":"тут ваша тема"}:')
             bot.register_next_step_handler(message, lambda msg: save_to_json(msg))
             return
         else:
