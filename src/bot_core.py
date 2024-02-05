@@ -93,7 +93,7 @@ def process_ocr_document(message):
             ocr_result = ocr_space_file(document_filename)
             # Store the OCR result for the user
             chat_id = message.chat.id
-            user_ocr_results[chat_id] = ocr_result
+            user_ocr_results[chat_id] = process_ai(ocr_result)
             user_states[chat_id] = 'change_ocr_data'
 
             markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
@@ -101,7 +101,7 @@ def process_ocr_document(message):
             change_button =types. KeyboardButton("Изменить")
             markup.add(confirm_button, change_button)
 
-            bot.reply_to(message, "OCR Result:\n" + process_ai(ocr_result), reply_markup=markup)
+            bot.reply_to(message, "OCR Result:\n" + user_ocr_results[chat_id], reply_markup=markup)
             bot.send_message(message.chat.id, "Вы хотите подтвердить или изменить ответ?", reply_markup=markup)
 
     except Exception as e:
@@ -113,7 +113,7 @@ def process_ocr_document(message):
         except Exception as e:
             print(f"Error deleting document file: {e}")
 
-@bot.message_handler(func=lambda message: message.text.lower() == 'изменить' or message.text.lower() == 'подветрдить')
+@bot.message_handler(func=lambda message: message.text.lower() == 'изменить' or message.text.lower() == 'подтвердить')
 def handle_review_response(message):
     chat_id = message.chat.id
     current_state = user_states.get(chat_id)
@@ -126,7 +126,7 @@ def handle_review_response(message):
         else:
             receiver_email = extract_email_from_ocr_result(ocr_result)
             excel_attachment_path = PREDEFINED_EXCEL_FILENAME
-            send_email(bot, receiver_email, attachment_path=excel_attachment_path)
+            send_email(bot, ocr_result,receiver_email, attachment_path=excel_attachment_path)
             user_states[chat_id] = None
 
 def process_changes(message):

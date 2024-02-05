@@ -23,24 +23,29 @@ SMTP_PASSWORD = SMTP_PASS
 
 JSON_FILE_PATH = './data/text.json'
 
-def extract_and_replace_from_file (client_name, product_name, company_name,json_file_path=JSON_FILE_PATH,):
-    with open(json_file_path, 'r') as file:
-        json_data = json.load(file)
+def extract_and_replace_from_json(json_string, json_file_path=JSON_FILE_PATH):
+    try:
+        json_data = json.loads(json_string)
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON format"}
 
-    text = json_data["text"]
-    theme = json_data["theme"]
+    with open(json_file_path, 'r') as file:
+        template_data = json.load(file)
+
+    text = template_data.get("text", "")
+    theme = template_data.get("theme", "")
 
     # Extract placeholders from the text
     placeholders = re.findall(r"\bclient_name\b|\bproduct_name\b|\bcompany_name\b", text)
 
     # Replace placeholders with actual data
-    replaced_text = text.replace("client_name", client_name)
-    replaced_text = replaced_text.replace("product_name", product_name)
+    replaced_text = text.replace("client_name", json_data.get("name", ""))
+    replaced_text = replaced_text.replace("product_name", json_data.get(" ", ""))
 
     # Replace placeholders in the theme
-    replaced_theme = theme.replace("client_name", client_name)
-    replaced_theme = replaced_theme.replace("product_name", product_name)
-    replaced_theme = replaced_theme.replace("company_name", company_name)
+    replaced_theme = theme.replace("client_name", json_data.get("name", ""))
+    replaced_theme = replaced_theme.replace("product_name", json_data.get(" ", ""))
+    replaced_theme = replaced_theme.replace("company_name", json_data.get("company_name", ""))
 
     return {
         "replaced_text": replaced_text,
@@ -48,18 +53,20 @@ def extract_and_replace_from_file (client_name, product_name, company_name,json_
         "missing_placeholders": list(set(placeholders) - {"client_name", "product_name", "company_name"})
     }
 
-def send_email(bot,receiver_email, attachment_path=None):
+def send_email(bot,json_text,receiver_email, attachment_path=None):
     """
     Connecting to gmail smtp using email and app password
     Adding attachment if provided
     And then send email with prededicated text, subject.
     """
     try:
+        data = extract_and_replace_from_json(json_text)
+
         msg = MIMEMultipart()
         msg['From'] = SMTP_USERNAME
         msg['To'] = receiver_email
-        msg['Subject'] = 'This is sam global trading'
-        msg.attach(MIMEText('This is our offers to you', 'plain'))
+        msg['Subject'] = data.get("replaced_theme","")
+        msg.attach(MIMEText(data.get("replaced_text","")))
 
         # Attach Excel file if provided
         if attachment_path:
