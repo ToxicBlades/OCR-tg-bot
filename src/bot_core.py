@@ -5,6 +5,7 @@ from email_utils import send_email
 from ocr_utils import ocr_space_file, extract_email_from_ocr_result
 from gpt_text_to_json import process_ai
 from amo_crm_post import create_deal_contact_company
+from write_excels import get_excel_files
 import os
 import time
 import re
@@ -34,7 +35,7 @@ def start_bot():
         time.sleep(30)
         start_bot()
 
-def save_to_json(message):
+def process_change_main_text(message):
     try:
         # Преобразовываем входной JSON-текст в словарь
         data = json.loads(message.text)
@@ -48,7 +49,7 @@ def save_to_json(message):
     except json.JSONDecodeError as e:
         print(f"Ошибка декодирования JSON: {e}, попробуйте позже")
 
-def process_new_value(message, credential_type):
+def process_new_value_credentials(message, credential_type):
     """
     Function to process the new value entered by the user and update the .env
     """
@@ -124,7 +125,7 @@ def handle_review_response(message):
         if message.text.lower() == 'изменить':
             bot.send_message(message.chat.id, 'Пожалуйста скопируйте ответ в {} и внесите изменения.Если вы не хотите вносить изменения и сразу отправить напишите отмена')
             user_changes[chat_id] = ocr_result  # Store the original OCR result for reference
-            bot.register_next_step_handler(message, process_changes)
+            bot.register_next_step_handler(message, process_changes_ocr)
         else:
             user_states[chat_id] = 'which_follow_up'
             markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
@@ -150,8 +151,11 @@ def handle_follow_up(message):
             bot.send_message(message.chat.id,"Письмы было отправленно на почту")
             user_states[chat_id] = None
         else:
+            files = get_excel_files()
+            bot.send_message(message.chat.id,f"Пожалуйста напишите название файла из предложенных для отправки его при фоллоу-апе\n{files}")
             pass
-def process_changes(message):
+
+def process_changes_ocr(message):
     chat_id = message.chat.id
     ocr_result = user_changes.get(chat_id)
 
@@ -177,7 +181,7 @@ def process_changes(message):
     else:
         bot.reply_to(message, "No original OCR result found for changes.")
 
-def process_excel_document(message):
+def process_pdf_change_document(message):
     try:
         file_info = bot.get_file(message.document.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
@@ -188,7 +192,6 @@ def process_excel_document(message):
         bot.reply_to(message, "Пдф файл успешно обновлён.")
     except Exception as e:
             bot.reply_to(message, f"Не получилось установить пдф,попробойти позже: {e}")
-
 
 @bot.message_handler(commands=['start'])
 def handle_start(message):
@@ -206,7 +209,7 @@ def handle_document(message):
     chat_id = message.chat.id
     current_state = user_states.get(chat_id)
     if current_state == 'change_pdf':
-        process_excel_document(message)
+        process_pdf_change_document(message)
         user_states[chat_id] = None
     else:
         process_ocr_document(message)
@@ -268,7 +271,7 @@ def handle_change_credentials_choice(message):
             # Ask the user for the new value
             user_states[chat_id] = None
             bot.send_message(chat_id, f"Пожалуйста введите новое значение:")
-            bot.register_next_step_handler(message, lambda msg: process_new_value(msg, credential_type))
+            bot.register_next_step_handler(message, lambda msg: process_new_value_credentials(msg, credential_type))
 
         else:
             bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
@@ -313,7 +316,7 @@ def handle_change_credentials_choice(message):
              # Ask the user for the new value
             user_states[chat_id] = None
             bot.send_message(chat_id, 'Пожалуйста введите новый текст в таком же формате как и старый {"text":"тут ваш текст где имя компании company_name, имя клиента  client_name, товар product_name","theme":"тут ваша тема"}:')
-            bot.register_next_step_handler(message, lambda msg: save_to_json(msg))
+            bot.register_next_step_handler(message, lambda msg: process_change_main_text(msg))
             return
         else:
             bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
