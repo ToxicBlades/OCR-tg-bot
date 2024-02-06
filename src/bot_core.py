@@ -4,6 +4,7 @@ from telebot import types
 from email_utils import send_email
 from ocr_utils import ocr_space_file, extract_email_from_ocr_result
 from gpt_text_to_json import process_ai
+from amo_crm_post import create_deal_contact_company
 import os
 import time
 import re
@@ -141,12 +142,13 @@ def handle_follow_up(message):
     current_state = user_states.get(chat_id)
     if current_state == 'which_follow_up':
         ocr_result = user_ocr_results.get(chat_id)
-        print(ocr_result)
         if message.text.lower() == 'стандартный фоллоу-ап':
             receiver_email = extract_email_from_ocr_result(ocr_result)
             excel_attachment_path = PREDEFINED_PDF_FILENAME
             send_email(bot, ocr_result,receiver_email, attachment_path=excel_attachment_path)
+            create_deal_contact_company(json.loads(ocr_result))
             bot.send_message(message.chat.id,"Письмы было отправленно на почту")
+            user_states[chat_id] = None
         else:
             pass
 def process_changes(message):

@@ -11,6 +11,8 @@ CLIENT_ID = os.getenv('AMOCRM_CLIENT_ID')
 CLIENT_SECRET = os.getenv('AMOCRM_CLIENT_SECRET')
 REDIRECT_URI = os.getenv('AMOCRM_REDIRECT_URI')
 
+ACCESS_TOKEN = os.getenv('AMOCRM_ACCESS_TOKEN')
+REFRESH_TOKEN = os.getenv('AMOCRM_REFRESH_TOKEN')
 # Initialize a requests session
 session = requests.Session()
 
@@ -76,7 +78,7 @@ def fetch_contacts(access_token, refresh_token, page=1, all_contacts=[]):
         return None
 
 
-def create_deal_contact_company(access_token,refresh_token,data):
+def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REFRESH_TOKEN):
 
     url = f'https://{SUBDOMAIN}.amocrm.ru/api/v4/leads/complex'
     headers = get_headers(access_token)
@@ -149,27 +151,27 @@ def create_deal_contact_company(access_token,refresh_token,data):
     else:
         print(f'Failed to create a deal: {response.text}')
 # Example usage
-if __name__ == "__main__":
-    ACCESS_TOKEN = os.getenv('AMOCRM_ACCESS_TOKEN')
-    REFRESH_TOKEN = os.getenv('AMOCRM_REFRESH_TOKEN')
+# if __name__ == "__main__":
+#     ACCESS_TOKEN = os.getenv('AMOCRM_ACCESS_TOKEN')
+#     REFRESH_TOKEN = os.getenv('AMOCRM_REFRESH_TOKEN')
 
-    data = {
-        "name": "ZAFER PALABIYIK",
-        "email": "zafer.palabiyik@ozsofra.com.mt",
-        "phone_number": "+356 9987 4001",
-        "company_name": "Ozsofra Group",
-        "address": "Triq il-Korp tal-Pijunieri, Bugibba, Malta",
-        "description": "Managing Director"
-    }
+#     data = {
+#         "name": "ZAFER PALABIYIK",
+#         "email": "zafer.palabiyik@ozsofra.com.mt",
+#         "phone_number": "+356 9987 4001",
+#         "company_name": "Ozsofra Group",
+#         "address": "Triq il-Korp tal-Pijunieri, Bugibba, Malta",
+#         "description": "Managing Director"
+#     }
 
-    print(data['address'])
+#     print(data['address'])
 
-    create_deal_contact_company(ACCESS_TOKEN, REFRESH_TOKEN, data)
+#     create_deal_contact_company(ACCESS_TOKEN, REFRESH_TOKEN, data)
 
 
 
-    # contacts = fetch_contacts(ACCESS_TOKEN, REFRESH_TOKEN)
-    # if contacts is not None:
-    #     print(f'Fetched {len(contacts)} contacts')
-    # else:
-    #     print('No contacts fetched')
+#     # contacts = fetch_contacts(ACCESS_TOKEN, REFRESH_TOKEN)
+#     # if contacts is not None:
+#     #     print(f'Fetched {len(contacts)} contacts')
+#     # else:
+#     #     print('No contacts fetched')
