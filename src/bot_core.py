@@ -18,7 +18,8 @@ WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
 JSON_FILE_PATH = './data/text.json'
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
-PREDEFINED_PDF_FILENAME = "./data/samg_global_catalog.pdf"
+
+PREDEFINED_PDF_FILENAME = "./data/sam_global_catalog.pdf"
 
 user_states = {}  # Tracks the current action/state of each user
 user_ocr_results = {} # track data of OCR results for current user
@@ -183,7 +184,7 @@ def handle_document(message):
     """
     chat_id = message.chat.id
     current_state = user_states.get(chat_id)
-    if current_state == 'change_excel':
+    if current_state == 'change_pdf':
         process_excel_document(message)
         user_states[chat_id] = None
     else:
@@ -297,12 +298,12 @@ def handle_change_credentials_choice(message):
             bot.reply_to(message, "Неправельный выбор. Пожалуйста выберите существующую опцию.")
 
 
-@bot.message_handler(commands=['change_excel'])
-def handle_change_excel(message):
+@bot.message_handler(commands=['change_pdf'])
+def handle_change_pdf(message):
     chat_id = message.chat.id
     # Here, add your authorization check if needed
     if chat_id in WHITE_LIST:
-        user_states[chat_id] = 'change_excel'
+        user_states[chat_id] = 'change_pdf'
         bot.send_message(chat_id, "Please upload the new Excel file.")
     else:
         bot.reply_to(message, "You are not authorized to perform this action.")
