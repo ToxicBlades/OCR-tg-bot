@@ -18,7 +18,7 @@ WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
 JSON_FILE_PATH = './data/text.json'
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
-PREDEFINED_EXCEL_FILENAME = "./data/main_follow.xlsx"
+PREDEFINED_PDF_FILENAME = "./data/main_follow.pdf"
 
 user_states = {}  # Tracks the current action/state of each user
 user_ocr_results = {} # track data of OCR results for current user
@@ -125,7 +125,7 @@ def handle_review_response(message):
             bot.register_next_step_handler(message, process_changes)
         else:
             receiver_email = extract_email_from_ocr_result(ocr_result)
-            excel_attachment_path = PREDEFINED_EXCEL_FILENAME
+            excel_attachment_path = PREDEFINED_PDF_FILENAME
             send_email(bot, ocr_result,receiver_email, attachment_path=excel_attachment_path)
             user_states[chat_id] = None
 
@@ -159,13 +159,13 @@ def process_excel_document(message):
     try:
         file_info = bot.get_file(message.document.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
-        save_path = PREDEFINED_EXCEL_FILENAME
+        save_path = PREDEFINED_PDF_FILENAME
 
         with open(save_path, 'wb') as new_file:
             new_file.write(downloaded_file)
-        bot.reply_to(message, "Эксель файл успешно обновлён.")
+        bot.reply_to(message, "Пдф файл успешно обновлён.")
     except Exception as e:
-            bot.reply_to(message, f"Не получилось установить эксель,попробойти позже: {e}")
+            bot.reply_to(message, f"Не получилось установить пдф,попробойти позже: {e}")
 
 
 @bot.message_handler(commands=['start'])
