@@ -18,7 +18,7 @@ WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
 JSON_FILE_PATH = './data/text.json'
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
-PREDEFINED_PDF_FILENAME = "./data/main_follow.pdf"
+PREDEFINED_PDF_FILENAME = "./data/samg_global_catalog.pdf"
 
 user_states = {}  # Tracks the current action/state of each user
 user_ocr_results = {} # track data of OCR results for current user
