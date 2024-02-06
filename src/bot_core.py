@@ -5,7 +5,7 @@ from email_utils import send_email
 from ocr_utils import ocr_space_file, extract_email_from_ocr_result
 from gpt_text_to_json import process_ai
 from amo_crm_post import create_deal_contact_company
-from write_excels import get_excel_files,format_excel_name,check_text_in_response
+from write_excels import get_excel_files,format_excel_name,check_text_in_response,extract_rar_to_excels,clear_folder
 import os
 import time
 import re
@@ -80,6 +80,7 @@ def process_new_value_credentials(message, credential_type):
 def process_ocr_document(message):
 
     try:
+        if message.document and message.document.mime_type.startswith('image/'):
             # Get the file ID of the document
             file_id = message.document.file_id
 
@@ -101,11 +102,14 @@ def process_ocr_document(message):
 
             markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
             confirm_button = types.KeyboardButton("Подтвердить")
-            change_button =types. KeyboardButton("Изменить")
+            change_button = types.KeyboardButton("Изменить")
             markup.add(confirm_button, change_button)
 
             bot.reply_to(message, "OCR Result:\n" + user_ocr_results[chat_id], reply_markup=markup)
             bot.send_message(message.chat.id, "Вы хотите подтвердить или изменить ответ?", reply_markup=markup)
+        else:
+            bot.reply_to(message, "Извините, но данный тип файла не поддерживается.")
+
 
     except Exception as e:
         print(f"Error processing document: {e}")
@@ -225,6 +229,15 @@ def handle_document(message):
     if current_state == 'change_pdf':
         process_pdf_change_document(message)
         user_states[chat_id] = None
+    elif current_state == 'change_excel_files':
+        clear_folder()
+        file_info = bot.get_file(message.document.file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        save_path = './data/excels/data.rar'
+        with open(save_path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+        extract_rar_to_excels(save_path)
+        pass
     else:
         process_ocr_document(message)
         #no need to put states to none because its inside proccesing while confirm or make changes
@@ -342,6 +355,25 @@ def handle_change_pdf(message):
     # Here, add your authorization check if needed
     if chat_id in WHITE_LIST:
         user_states[chat_id] = 'change_pdf'
-        bot.send_message(chat_id, "Please upload the new Excel file.")
+        bot.send_message(chat_id, "Пожалуйста загрузите новый пдф.")
     else:
         bot.reply_to(message, "You are not authorized to perform this action.")
+
+
+
+@bot.message_handler(commands=['change_excel_files'])
+def handle_change_excel_files(message):
+    chat_id = message.chat.id
+    # Here, add your authorization check if needed
+    if chat_id in WHITE_LIST:
+        user_states[chat_id] = 'change_excel_files'
+        bot.send_message(chat_id, "Пожалуйста загрузите архив со всеми эксель файлами. ОСТОРОЖНО! загрузка новых эксель файлов удалит все старые. Напишите отмена если вы не хотите ничего удалять")
+    else:
+        bot.reply_to(message, "You are not authorized to perform this action.")
+
+@bot.message_handler(func=lambda message: message.text.lower() in ['отмена'])
+def cancel_change_excel(message):
+    chat_id = message.chat.id
+    if user_states[chat_id] == 'change_excel_files' :
+        user_states[chat_id] = None
+        bot.send_message(message.chat.id,"Изменение екселей отменено")
