@@ -5,7 +5,7 @@ from email_utils import send_email
 from ocr_utils import ocr_space_file, extract_email_from_ocr_result
 from gpt_text_to_json import process_ai
 from amo_crm_post import create_deal_contact_company
-from write_excels import get_excel_files
+from write_excels import get_excel_files,format_excel_name,check_text_in_response
 import os
 import time
 import re
@@ -145,15 +145,29 @@ def handle_follow_up(message):
         ocr_result = user_ocr_results.get(chat_id)
         if message.text.lower() == 'стандартный фоллоу-ап':
             receiver_email = extract_email_from_ocr_result(ocr_result)
-            excel_attachment_path = PREDEFINED_PDF_FILENAME
-            send_email(bot, ocr_result,receiver_email, attachment_path=excel_attachment_path)
+            pdf_attachment_path = PREDEFINED_PDF_FILENAME
+            send_email(bot, ocr_result,receiver_email, attachment_path=pdf_attachment_path)
             create_deal_contact_company(json.loads(ocr_result))
             bot.send_message(message.chat.id,"Письмы было отправленно на почту")
             user_states[chat_id] = None
         else:
             files = get_excel_files()
             bot.send_message(message.chat.id,f"Пожалуйста напишите название файла из предложенных для отправки его при фоллоу-апе\n{files}")
-            pass
+            bot.register_next_step_handler(message, process_excel_choice)
+
+def process_excel_choice(message):
+    chat_id = message.chat.id
+    ocr_result = user_ocr_results.get(chat_id)
+    if check_text_in_response(message.text):
+        excel_attachment_path = format_excel_name(message.text)
+        receiver_email = extract_email_from_ocr_result(ocr_result)
+        send_email(bot, ocr_result,receiver_email, attachment_path=excel_attachment_path)
+        create_deal_contact_company(json.loads(ocr_result))
+        bot.send_message(message.chat.id,"Письмы было отправленно на почту")
+        user_states[chat_id] = None
+    else:
+        bot.send_message(message.chat.id,"Такого ексль файла не существует,пожалуйста введите один из предложенных выше")
+        bot.register_next_step_handler(message, process_excel_choice)
 
 def process_changes_ocr(message):
     chat_id = message.chat.id
