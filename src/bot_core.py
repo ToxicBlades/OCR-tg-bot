@@ -125,11 +125,30 @@ def handle_review_response(message):
             user_changes[chat_id] = ocr_result  # Store the original OCR result for reference
             bot.register_next_step_handler(message, process_changes)
         else:
+            user_states[chat_id] = 'which_follow_up'
+            markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+            confirm_button = types.KeyboardButton("Стандартный фоллоу-ап")
+            change_button =types. KeyboardButton("Конкретный фоллоу-ап")
+            markup.add(confirm_button, change_button)
+
+            bot.send_message(message.chat.id, "Пожалуйста выберите фоллоу-ап", reply_markup=markup)
+
+
+
+@bot.message_handler(func=lambda message: message.text.lower() == 'стандартный фоллоу-ап' or message.text.lower() == 'конкретный фоллоу-ап')
+def handle_follow_up(message):
+    chat_id = message.chat.id
+    current_state = user_states.get(chat_id)
+    if current_state == 'which_follow_up':
+        ocr_result = user_ocr_results.get(chat_id)
+        print(ocr_result)
+        if message.text.lower() == 'стандартный фоллоу-ап':
             receiver_email = extract_email_from_ocr_result(ocr_result)
             excel_attachment_path = PREDEFINED_PDF_FILENAME
             send_email(bot, ocr_result,receiver_email, attachment_path=excel_attachment_path)
-            user_states[chat_id] = None
-
+            bot.send_message(message.chat.id,"Письмы было отправленно на почту")
+        else:
+            pass
 def process_changes(message):
     chat_id = message.chat.id
     ocr_result = user_changes.get(chat_id)
