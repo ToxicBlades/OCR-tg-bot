@@ -21,7 +21,7 @@ def process_ai(text):
         completion =  client.chat.completions.create(
         # gpt-4-0613
         # gpt-3.5-turbo
-        messages = [{"role": "user", "content": f"I will provide you text from a business card pls provide me json which will follow this structure: name,email,phone_number,company_name,adress,description. If some fiels is missing just fill them with none: {text}."}],
+        messages = [{"role": "user", "content": f"I will provide you text from a business card pls provide me json which will follow this structure: name,email,phone_number,company_name,adress,description,needs. If some fiels is missing just fill them with none: {text}."}],
         model="gpt-3.5-turbo")
         # Extract the required information from the completion
         response_data = completion.choices[0].message.content
