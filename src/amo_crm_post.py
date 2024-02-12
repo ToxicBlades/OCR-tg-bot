@@ -93,12 +93,23 @@ def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REF
                 "updated_by": 0,
                 "custom_fields_values": [
                     {
+                        "field_id": 434841,
+                        "values": [
+                            {
+                                "value": data["needs"],
+                            }
+                        ],
+
+                    },
+
+                    {
                         "field_id": 8187,
                         "values": [
                             {
                                 "value": data["description"],
                             }
                         ],
+
                     }, {
                 "field_id": 8191,
                 "values": [
@@ -161,17 +172,18 @@ def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REF
 #         "phone_number": "+356 9987 4001",
 #         "company_name": "Ozsofra Group",
 #         "address": "Triq il-Korp tal-Pijunieri, Bugibba, Malta",
-#         "description": "Managing Director"
+#         "description": "Managing Director",
+#         "needs": 'test'
 #     }
 
 #     print(data['address'])
 
-#     create_deal_contact_company(ACCESS_TOKEN, REFRESH_TOKEN, data)
+#     create_deal_contact_company(data, 'test')
 
 
 
-#     # contacts = fetch_contacts(ACCESS_TOKEN, REFRESH_TOKEN)
-#     # if contacts is not None:
-#     #     print(f'Fetched {len(contacts)} contacts')
-#     # else:
-#     #     print('No contacts fetched')
+    # contacts = fetch_contacts(ACCESS_TOKEN, REFRESH_TOKEN)
+    # if contacts is not None:
+    #     print(f'Fetched {len(contacts)} contacts')
+    # else:
+    #     print('No contacts fetched')
