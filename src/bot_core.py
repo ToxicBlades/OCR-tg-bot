@@ -149,29 +149,14 @@ def handle_follow_up(message):
         ocr_result = user_ocr_results.get(chat_id)
         if message.text.lower() == 'стандартный фоллоу-ап':
             receiver_email = extract_email_from_ocr_result(ocr_result)
-            pdf_attachment_path = PREDEFINED_PDF_FILENAME
-            send_email(bot, ocr_result,receiver_email, attachment_path=pdf_attachment_path)
-            create_deal_contact_company(json.loads(ocr_result))
-            bot.send_message(message.chat.id,"Письмы было отправленно на почту")
+            send_email(bot, ocr_result,receiver_email)
+            #create_deal_contact_company(json.loads(ocr_result))
+            bot.send_message(message.chat.id,"Письмо было отправленно на почту, контакт в амо создан")
             user_states[chat_id] = None
         else:
-            files = get_excel_files()
-            bot.send_message(message.chat.id,f"Пожалуйста напишите название файла из предложенных для отправки его при фоллоу-апе\n{files}")
-            bot.register_next_step_handler(message, process_excel_choice)
+            user_states[chat_id] = 'excel_for_email'
+            bot.send_message(message.chat.id,f"Пожалуйста отправьте файл который хотите отправить при фоллоу апе\n")
 
-def process_excel_choice(message):
-    chat_id = message.chat.id
-    ocr_result = user_ocr_results.get(chat_id)
-    if check_text_in_response(message.text):
-        excel_attachment_path = format_excel_name(message.text)
-        receiver_email = extract_email_from_ocr_result(ocr_result)
-        send_email(bot, ocr_result,receiver_email, attachment_path=excel_attachment_path)
-        create_deal_contact_company(json.loads(ocr_result))
-        bot.send_message(message.chat.id,"Письмы было отправленно на почту")
-        user_states[chat_id] = None
-    else:
-        bot.send_message(message.chat.id,"Такого ексль файла не существует,пожалуйста введите один из предложенных выше")
-        bot.register_next_step_handler(message, process_excel_choice)
 
 def process_changes_ocr(message):
     chat_id = message.chat.id
@@ -215,7 +200,24 @@ def process_pdf_change_document(message):
 def handle_start(message):
     chat_id = message.chat.id
     #bot.send_message(chat_id,f'your chat id is {chat_id}')
-    bot.reply_to(message, "Это OCR бот который распознает вашу визику и отправит фоллоу ап для вашего клиента. отправляйте мне только файлы")
+    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+    confirm_button = types.KeyboardButton("Общий Лид")
+    change_button =types.KeyboardButton("Конкретный Лид")
+    markup.add(confirm_button, change_button)
+    user_states[chat_id] = 'which_lead'
+    bot.reply_to(message, "Пожалуйста выберите какой лид вы собираетесь создать", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: message.text.lower() == 'общий лид' or message.text.lower() == 'конкретный лид')
+def handle_follow_up(message):
+    chat_id = message.chat.id
+    current_state = user_states.get(chat_id)
+    if current_state == 'which_lead':
+        if message.text.lower() == 'общий лид':
+            bot.send_message(message.chat.id,"Пожалуйста отправьте фото доккументом")
+            current_state = None
+        else:
+            pass
+
 
 @bot.message_handler(content_types=['document'])
 def handle_document(message):
@@ -229,15 +231,25 @@ def handle_document(message):
     if current_state == 'change_pdf':
         process_pdf_change_document(message)
         user_states[chat_id] = None
-    elif current_state == 'change_excel_files':
-        clear_folder()
+    elif current_state == 'excel_for_email':
+        ocr_result = user_ocr_results.get(chat_id)
+        receiver_email = extract_email_from_ocr_result(ocr_result)
+
         file_info = bot.get_file(message.document.file_id)
+        file_extension = message.document.file_name.split('.')[-1].lower()
         downloaded_file = bot.download_file(file_info.file_path)
-        save_path = './data/excels/data.rar'
-        with open(save_path, 'wb') as new_file:
+        save_path = f'./data/{file_extension}s/'  # сохраняем файлы в папку с соответствующим расширением
+        os.makedirs(save_path, exist_ok=True)  # убедимся, что папка существует или создадим ее
+        file_path = os.path.join(save_path, message.document.file_name)
+        with open(file_path, 'wb') as new_file:
             new_file.write(downloaded_file)
-        extract_rar_to_excels(save_path)
-        pass
+        # create_deal_contact_company(json.loads(ocr_result))
+        send_email(bot, ocr_result, receiver_email, attachment_path_2=file_path)
+        create_deal_contact_company(json.loads(ocr_result))
+        bot.send_message(message.chat.id,"Письмо было отправленно на почту, контакт в амо создан")
+        user_states[chat_id] = None
+
+        os.remove(file_path)
     else:
         process_ocr_document(message)
         #no need to put states to none because its inside proccesing while confirm or make changes
@@ -360,20 +372,3 @@ def handle_change_pdf(message):
         bot.reply_to(message, "You are not authorized to perform this action.")
 
 
-
-@bot.message_handler(commands=['change_excel_files'])
-def handle_change_excel_files(message):
-    chat_id = message.chat.id
-    # Here, add your authorization check if needed
-    if chat_id in WHITE_LIST:
-        user_states[chat_id] = 'change_excel_files'
-        bot.send_message(chat_id, "Пожалуйста загрузите архив со всеми эксель файлами. ОСТОРОЖНО! загрузка новых эксель файлов удалит все старые. Напишите отмена если вы не хотите ничего удалять")
-    else:
-        bot.reply_to(message, "You are not authorized to perform this action.")
-
-@bot.message_handler(func=lambda message: message.text.lower() in ['отмена'])
-def cancel_change_excel(message):
-    chat_id = message.chat.id
-    if user_states[chat_id] == 'change_excel_files' :
-        user_states[chat_id] = None
-        bot.send_message(message.chat.id,"Изменение екселей отменено")
