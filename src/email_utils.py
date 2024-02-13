@@ -55,7 +55,7 @@ def extract_and_replace_from_json(json_string, json_file_path=JSON_FILE_PATH):
         "missing_placeholders": list(set(placeholders) - {"client_name", "product_name", "company_name"})
     }
 
-def send_email(bot,json_text,receiver_email, attachment_path_1=PREDEFINED_PDF_FILENAME, attachment_path_2 = None):
+def send_email(bot,json_text,receiver_email, attachment_path_1=PREDEFINED_PDF_FILENAME, attachment_paths = None):
     """
     Connecting to gmail smtp using email and app password
     Adding attachment if provided
@@ -77,15 +77,14 @@ def send_email(bot,json_text,receiver_email, attachment_path_1=PREDEFINED_PDF_FI
             encoders.encode_base64(part_1)
             part_1.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(attachment_path_1)}"')
             msg.attach(part_1)
-
-        # Attach the second file
-        if attachment_path_2:
-            with open(attachment_path_2, 'rb') as attachment_2:
-                part_2 = MIMEBase('application', 'octet-stream')
-                part_2.set_payload(attachment_2.read())
-                encoders.encode_base64(part_2)
-                part_2.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(attachment_path_2)}"')
-                msg.attach(part_2)
+        if attachment_paths:
+             for attachment_path in attachment_paths:
+                 with open(attachment_path, 'rb') as attachment:
+                     part = MIMEBase('application', 'octet-stream')
+                     part.set_payload(attachment.read())
+                     encoders.encode_base64(part)
+                     part.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(attachment_path)}"')
+                     msg.attach(part)
 
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()

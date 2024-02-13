@@ -10,6 +10,7 @@ import os
 import time
 import re
 import json
+import threading
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -26,6 +27,10 @@ PREDEFINED_PDF_FILENAME = "./data/sam_global_catalog.pdf"
 user_states = {}  # Tracks the current action/state of each user
 user_ocr_results = {} # track data of OCR results for current user
 user_changes = {} #To save old data if people missclicked and do not want to make changes
+user_file_paths = {} # to store all files for email
+
+
+
 def start_bot():
     try:
         bot.polling(True)
@@ -155,7 +160,7 @@ def handle_follow_up(message):
             user_states[chat_id] = None
         else:
             user_states[chat_id] = 'excel_for_email'
-            bot.send_message(message.chat.id,f"Пожалуйста отправьте файл который хотите отправить при фоллоу апе\n")
+            bot.send_message(message.chat.id,f"Пожалуйста отправьте файл который хотите отправить при фоллоу апе\nПо окончанию загрузки файлов пожалуйста подождите ~10 секкунд и введите комманду /send_email")
 
 
 def process_changes_ocr(message):
@@ -216,7 +221,8 @@ def handle_follow_up(message):
             bot.send_message(message.chat.id,"Пожалуйста отправьте фото доккументом")
             current_state = None
         else:
-            pass
+            bot.send_message(message.chat.id,"Конкретные лиды мы обрабатываем в ручную")
+            current_state = None
 
 
 @bot.message_handler(content_types=['document'])
@@ -232,9 +238,6 @@ def handle_document(message):
         process_pdf_change_document(message)
         user_states[chat_id] = None
     elif current_state == 'excel_for_email':
-        ocr_result = user_ocr_results.get(chat_id)
-        receiver_email = extract_email_from_ocr_result(ocr_result)
-
         file_info = bot.get_file(message.document.file_id)
         file_extension = message.document.file_name.split('.')[-1].lower()
         downloaded_file = bot.download_file(file_info.file_path)
@@ -243,16 +246,27 @@ def handle_document(message):
         file_path = os.path.join(save_path, message.document.file_name)
         with open(file_path, 'wb') as new_file:
             new_file.write(downloaded_file)
-        # create_deal_contact_company(json.loads(ocr_result))
-        send_email(bot, ocr_result, receiver_email, attachment_path_2=file_path)
-        create_deal_contact_company(json.loads(ocr_result))
-        bot.send_message(message.chat.id,"Письмо было отправленно на почту, контакт в амо создан")
-        user_states[chat_id] = None
 
-        os.remove(file_path)
+        user_file_paths.setdefault(chat_id, []).append(file_path)
     else:
         process_ocr_document(message)
         #no need to put states to none because its inside proccesing while confirm or make changes
+
+@bot.message_handler(commands=['send_email'])
+def send_one_email(message):
+    chat_id = message.chat.id
+    ocr_result = user_ocr_results.get(chat_id)
+    receiver_email = extract_email_from_ocr_result(ocr_result)
+    #create_deal_contact_company(json.loads(ocr_result))
+    send_email(bot, ocr_result, receiver_email, attachment_paths=user_file_paths[chat_id])
+
+    # Cleanup
+    for file_path in user_file_paths[chat_id]:
+         os.remove(file_path)
+    user_file_paths[chat_id] = None
+    user_states[chat_id] = None
+    user_ocr_results[chat_id] = None
+    bot.send_message(chat_id, "Email sent with all attachments.")
 
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
