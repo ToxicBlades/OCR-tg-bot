@@ -122,7 +122,8 @@ def process_ocr_document(message):
         bot.reply_to(message, "Error processing document. Please try again later.")
     finally:
         try:
-            os.remove(document_filename)
+            if document_filename:
+                os.remove(document_filename)
         except Exception as e:
             print(f"Error deleting document file: {e}")
 

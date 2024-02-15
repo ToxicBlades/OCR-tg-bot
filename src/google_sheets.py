@@ -27,8 +27,6 @@ def write_to_google_sheets(json_data):
             'email',
             'phone',
         ]
-
-        # Load JSON data
         data = json.loads(json_data)
 
         # Set default value for 'link' if not present in JSON data
