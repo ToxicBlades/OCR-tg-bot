@@ -80,11 +80,11 @@ def fetch_contacts(access_token, refresh_token, page=1, all_contacts=[]):
 
 
 def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REFRESH_TOKEN):
+    try:
+        url = f'https://{SUBDOMAIN}.amocrm.ru/api/v4/leads/complex'
+        headers = get_headers(access_token)
 
-    url = f'https://{SUBDOMAIN}.amocrm.ru/api/v4/leads/complex'
-    headers = get_headers(access_token)
-
-    params = {
+        params = {
     "name": f'Deal for {data["name"]}',
     "_embedded": {
         "contacts": [
@@ -150,18 +150,24 @@ def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REF
     "pipeline_id": 7213102,
 }
 
-    response = session.post(url, json=[params], headers=headers)
-    if response.status_code == 200:
-        print('Deal created successfully')
-        print(response)
-    elif response.status_code == 401:
-        new_tokens = refresh_access_token(refresh_token)
-        if new_tokens:
-            create_deal_contact_company(new_tokens['access_token'], new_tokens['refresh_token'], data)
+        response = session.post(url, json=[params], headers=headers)
+        if response.status_code == 200:
+            print('Deal created successfully')
+            print(response)
+        elif response.status_code == 401:
+            new_tokens = refresh_access_token(refresh_token)
+            if new_tokens:
+                create_deal_contact_company(access_token=new_tokens['access_token'],refresh_token=new_tokens['refresh_token'],data=data)
+            else:
+                print('Failed to refresh token and create a deal')
         else:
-            print('Failed to refresh token and create a deal')
-    else:
-        print(f'Failed to create a deal: {response.text}')
+            print(f'Failed to create a deal: {response.text}')
+    except:
+        new_tokens = refresh_access_token(refresh_token)
+
+        create_deal_contact_company(access_token=new_tokens['access_token'],refresh_token=new_tokens['refresh_token'],data=data)
+
+
 # Example usage
 # if __name__ == "__main__":
 #     ACCESS_TOKEN = os.getenv('AMOCRM_ACCESS_TOKEN')
@@ -179,12 +185,5 @@ def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REF
 
 #     print(data['address'])
 
-#     create_deal_contact_company(data, 'test')
+#     create_deal_contact_company(data=data)
 
-
-
-    # contacts = fetch_contacts(ACCESS_TOKEN, REFRESH_TOKEN)
-    # if contacts is not None:
-    #     print(f'Fetched {len(contacts)} contacts')
-    # else:
-    #     print('No contacts fetched')
