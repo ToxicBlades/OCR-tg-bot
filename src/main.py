@@ -1,4 +1,5 @@
 # main.py
+# -*- coding: utf-8 -*-
 import threading
 from bot_core import start_bot
 

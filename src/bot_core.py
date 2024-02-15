@@ -155,7 +155,7 @@ def handle_follow_up(message):
         if message.text.lower() == 'стандартный фоллоу-ап':
             receiver_email = extract_email_from_ocr_result(ocr_result)
             send_email(bot, ocr_result,receiver_email)
-            #create_deal_contact_company(json.loads(ocr_result))
+            create_deal_contact_company(json.loads(ocr_result))
             bot.send_message(message.chat.id,"Письмо было отправленно на почту, контакт в амо создан")
             user_states[chat_id] = None
         else:
@@ -257,7 +257,7 @@ def send_one_email(message):
     chat_id = message.chat.id
     ocr_result = user_ocr_results.get(chat_id)
     receiver_email = extract_email_from_ocr_result(ocr_result)
-    #create_deal_contact_company(json.loads(ocr_result))
+    create_deal_contact_company(json.loads(ocr_result))
     send_email(bot, ocr_result, receiver_email, attachment_paths=user_file_paths[chat_id])
 
     # Cleanup
