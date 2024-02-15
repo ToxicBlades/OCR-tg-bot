@@ -90,12 +90,14 @@ def process_ocr_document(message):
 
             # Download the document
             file_info = bot.get_file(file_id)
+            file_extension = message.document.file_name.split('.')[-1].lower()
             downloaded_file = bot.download_file(file_info.file_path)
 
             # Save the document
-            document_filename = f"temp_document_{file_id}.jpg"
+            document_filename = f"temp_document_{file_id}.{file_extension}"
             with open(document_filename, 'wb') as new_file:
                 new_file.write(downloaded_file)
+
 
             # Perform OCR on the saved document
             ocr_result = ocr_space_file(document_filename)
