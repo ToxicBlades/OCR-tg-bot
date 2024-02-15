@@ -5,12 +5,11 @@ from email_utils import send_email
 from ocr_utils import ocr_space_file, extract_email_from_ocr_result
 from gpt_text_to_json import process_ai
 from amo_crm_post import create_deal_contact_company
-from write_excels import get_excel_files,format_excel_name,check_text_in_response,extract_rar_to_excels,clear_folder
+from google_sheets import write_to_google_sheets
 import os
 import time
 import re
 import json
-import threading
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -156,8 +155,11 @@ def handle_follow_up(message):
             receiver_email = extract_email_from_ocr_result(ocr_result)
             send_email(bot, ocr_result,receiver_email)
             create_deal_contact_company(json.loads(ocr_result))
+            write_to_google_sheets(ocr_result)
             bot.send_message(message.chat.id,"Письмо было отправленно на почту, контакт в амо создан")
+            user_file_paths[chat_id] = None
             user_states[chat_id] = None
+            user_ocr_results[chat_id] = None
         else:
             user_states[chat_id] = 'excel_for_email'
             bot.send_message(message.chat.id,f"Пожалуйста отправьте файл который хотите отправить при фоллоу апе\nПо окончанию загрузки файлов пожалуйста подождите ~10 секкунд и введите комманду /send_email")
@@ -259,7 +261,7 @@ def send_one_email(message):
     receiver_email = extract_email_from_ocr_result(ocr_result)
     create_deal_contact_company(json.loads(ocr_result))
     send_email(bot, ocr_result, receiver_email, attachment_paths=user_file_paths[chat_id])
-
+    write_to_google_sheets(ocr_result)
     # Cleanup
     for file_path in user_file_paths[chat_id]:
          os.remove(file_path)

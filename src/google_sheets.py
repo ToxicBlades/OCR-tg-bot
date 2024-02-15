@@ -9,7 +9,7 @@ def get_google_sheets_client():
         'https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive'
     ]
-    creds = Credentials.from_service_account_file('credentials.json', scopes=scope)
+    creds = Credentials.from_service_account_file('./data/credentials.json', scopes=scope)
     client = gspread.authorize(creds)
     return client
 
@@ -52,3 +52,4 @@ def write_to_google_sheets(json_data):
 
         # You might want to return False or some error message to indicate failure
         return False
+
