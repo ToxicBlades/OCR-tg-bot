@@ -9,7 +9,7 @@ def get_google_sheets_client():
         'https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive'
     ]
-    creds = Credentials.from_service_account_file('./data/credentials.json', scopes=scope)
+    creds = Credentials.from_service_account_file('/opt/perspektiva-bot-py/data/credentials.json', scopes=scope)
     client = gspread.authorize(creds)
     return client
 
@@ -21,12 +21,7 @@ def write_to_google_sheets(json_data):
         worksheet = gc.open('SES leads data').sheet1
 
         # Define the order of columns in Google Sheets
-        column_order = [
-            'link',
-            'name',
-            'email',
-            'phone',
-        ]
+
         data = json.loads(json_data)
 
         # Set default value for 'link' if not present in JSON data
@@ -37,7 +32,7 @@ def write_to_google_sheets(json_data):
             link_value,
             data.get('name', ''),
             data.get('email', ''),
-            data.get('phone', '')
+            data.get('phone_number', '')
         ]
 
         # Add data to Google Sheets
