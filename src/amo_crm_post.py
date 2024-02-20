@@ -27,15 +27,21 @@ def get_headers(access_token):
 
 def refresh_access_token(refresh_token):
     """Refresh the access token using the refresh token."""
+    options = {
+    'headers': {
+        'Content-Type': 'application/json',
+        'User-Agent': 'amoCRM-oAuth-client/1.0',
+         }
+    }
     url = f'https://{SUBDOMAIN}.amocrm.ru/oauth2/access_token'
     data = {
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET,
         'grant_type': 'refresh_token',
         'refresh_token': refresh_token,
-        'redirect_uri': REDIRECT_URI
+        'redirect_uri': REDIRECT_URI,
     }
-    response = session.post(url, json=data)
+    response = requests.post(url, json=data, headers=options['headers'])
     if response.status_code == 200:
         tokens = response.json()
         os.environ['AMOCRM_ACCESS_TOKEN'] = tokens['access_token']
@@ -43,39 +49,6 @@ def refresh_access_token(refresh_token):
         return tokens
     else:
         print('Error refreshing token:', response.text)
-        return None
-
-
-def fetch_contacts(access_token, refresh_token, page=1, all_contacts=[]):
-    """Fetch contacts from amoCRM."""
-    if page == 1:
-        all_contacts = []
-
-    url = f'https://{SUBDOMAIN}.amocrm.ru/api/v4/contacts'
-    headers = get_headers(access_token)
-    params = {
-        'limit': 10,
-        'page': page,
-    }
-
-    response = session.get(url, headers=headers, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        if '_embedded' in data and 'contacts' in data['_embedded']:
-            all_contacts.extend(data['_embedded']['contacts'])
-        if '_links' in data and 'next' in data['_links']:
-            fetch_contacts(access_token, refresh_token, page + 1, all_contacts)
-        return all_contacts
-    elif response.status_code == 401:
-        # Attempt to refresh token and retry
-        new_tokens = refresh_access_token(refresh_token)
-        if new_tokens:
-            return fetch_contacts(new_tokens['access_token'], new_tokens['refresh_token'], page, all_contacts)
-        else:
-            print('Failed to refresh token and retrieve contacts')
-            return None
-    else:
-        print(f'Failed to fetch contacts: {response.text}')
         return None
 
 
@@ -90,7 +63,7 @@ def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REF
         "contacts": [
             {
                 "first_name": data["name"],
-                "responsible_user_id": 9805834,
+                "responsible_user_id": 6580408,
                 "updated_by": 0,
                 "custom_fields_values": [
                     {
@@ -133,12 +106,13 @@ def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REF
         "companies": [
             {
                 "name": data["company_name"],
+                "responsible_user_id": 6580408,
                 "custom_fields_values": [
                     {
                         "field_id": 8197,
                         "values": [
                             {
-                                "value": data["address"],
+                                "value": data.get("address", data.get("adress"))
                             }
                         ],
                     },
@@ -146,7 +120,7 @@ def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REF
             }
         ]
     },
-    "responsible_user_id": 9805834,
+    "responsible_user_id": 6580408,
     "pipeline_id": 7213102,
 }
 
@@ -164,26 +138,26 @@ def create_deal_contact_company(data,access_token=ACCESS_TOKEN,refresh_token=REF
             print(f'Failed to create a deal: {response.text}')
     except:
         new_tokens = refresh_access_token(refresh_token)
+        if new_tokens:
+            create_deal_contact_company(access_token=new_tokens['access_token'],refresh_token=new_tokens['refresh_token'],data=data)
 
-        create_deal_contact_company(access_token=new_tokens['access_token'],refresh_token=new_tokens['refresh_token'],data=data)
 
-
-# Example usage
+# #Example usage
 # if __name__ == "__main__":
-#     ACCESS_TOKEN = os.getenv('AMOCRM_ACCESS_TOKEN')
-#     REFRESH_TOKEN = os.getenv('AMOCRM_REFRESH_TOKEN')
+    # ACCESS_TOKEN = os.getenv('AMOCRM_ACCESS_TOKEN')
+    # REFRESH_TOKEN = os.getenv('AMOCRM_REFRESH_TOKEN')
 
-#     data = {
-#         "name": "ZAFER PALABIYIK",
-#         "email": "zafer.palabiyik@ozsofra.com.mt",
-#         "phone_number": "+356 9987 4001",
-#         "company_name": "Ozsofra Group",
-#         "address": "Triq il-Korp tal-Pijunieri, Bugibba, Malta",
-#         "description": "Managing Director",
-#         "needs": 'test'
-#     }
+    # data = {
+    #     "name": "ZAFER PALABIYIK",
+    #     "email": "zafer.palabiyik@ozsofra.com.mt",
+    #     "phone_number": "+356 9987 4001",
+    #     "company_name": "Ozsofra Group",
+    #     "address": "Triq il-Korp tal-Pijunieri, Bugibba, Malta",
+    #     "description": "Managing Director",
+    #     "needs": 'test'
+    # }
 
-#     print(data['address'])
 
-#     create_deal_contact_company(data=data)
+
+    # create_deal_contact_company(data=data)
 
