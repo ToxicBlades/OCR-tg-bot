@@ -17,11 +17,11 @@ TESTBOTKEY = os.getenv("TESTBOTKEY")
 CHAT_TEST = os.getenv("CHAT_TEST")
 WHITE_LIST = os.getenv("WHITE_LIST")
 WHITE_LIST = [int(item) for item in WHITE_LIST.split(',')]
-JSON_FILE_PATH = './data/text.json'
+JSON_FILE_PATH = '/opt/perspektiva-bot-py/data/text.json'
 TOKEN = TESTBOTKEY
 bot = telebot.TeleBot(TOKEN)
 
-PREDEFINED_PDF_FILENAME = "./data/sam_global_catalog.pdf"
+PREDEFINED_PDF_FILENAME = "/opt/perspektiva-bot-py/data/sam_global_catalog.pdf"
 
 user_states = {}  # Tracks the current action/state of each user
 user_ocr_results = {} # track data of OCR results for current user
@@ -153,19 +153,21 @@ def handle_follow_up(message):
     chat_id = message.chat.id
     current_state = user_states.get(chat_id)
     if current_state == 'which_follow_up':
-        ocr_result = user_ocr_results.get(chat_id)
         if message.text.lower() == 'стандартный фоллоу-ап':
+            ocr_result = user_ocr_results.get(chat_id)
             receiver_email = extract_email_from_ocr_result(ocr_result)
             send_email(bot, ocr_result,receiver_email)
+            bot.send_message(message.chat.id,"Письмо было отправленно на почту")
             create_deal_contact_company(json.loads(ocr_result))
+            bot.send_message(message.chat.id,"Контакт был создан в амо")
             write_to_google_sheets(ocr_result)
-            bot.send_message(message.chat.id,"Письмо было отправленно на почту, контакт в амо создан")
+            bot.send_message(message.chat.id,"Данные были записанны в гугл таблицу")
             user_file_paths[chat_id] = None
             user_states[chat_id] = None
             user_ocr_results[chat_id] = None
         else:
             user_states[chat_id] = 'excel_for_email'
-            bot.send_message(message.chat.id,f"Пожалуйста отправьте файл который хотите отправить при фоллоу апе\nПо окончанию загрузки файлов пожалуйста подождите ~10 секкунд и введите комманду /send_email")
+            bot.send_message(message.chat.id,f"Пожалуйста отправьте файл который хотите отправить при фоллоу апе\nПо окончанию загрузки файлов пожалуйста подождите ~20-30 секкунд и введите комманду /send_email")
 
 
 def process_changes_ocr(message):
@@ -180,7 +182,7 @@ def process_changes_ocr(message):
         else:
             # Handle the user's input as the modified OCR result
             modified_ocr_result = message.text
-            user_ocr_results[chat_id] = modified_ocr_result
+            user_ocr_results[chat_id] = str(modified_ocr_result)
 
             markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
             confirm_button = types.KeyboardButton("Подтвердить")
@@ -246,7 +248,7 @@ def handle_document(message):
         file_info = bot.get_file(message.document.file_id)
         file_extension = message.document.file_name.split('.')[-1].lower()
         downloaded_file = bot.download_file(file_info.file_path)
-        save_path = f'./data/{file_extension}s/'  # сохраняем файлы в папку с соответствующим расширением
+        save_path = f'/opt/perspektiva-bot-py/data/{file_extension}s/'  # сохраняем файлы в папку с соответствующим расширением
         os.makedirs(save_path, exist_ok=True)  # убедимся, что папка существует или создадим ее
         file_path = os.path.join(save_path, message.document.file_name)
         with open(file_path, 'wb') as new_file:
@@ -261,10 +263,17 @@ def handle_document(message):
 def send_one_email(message):
     chat_id = message.chat.id
     ocr_result = user_ocr_results.get(chat_id)
+
     receiver_email = extract_email_from_ocr_result(ocr_result)
     create_deal_contact_company(json.loads(ocr_result))
+    bot.send_message(message.chat.id,"Контакт был создан в амо")
+
     send_email(bot, ocr_result, receiver_email, attachment_paths=user_file_paths[chat_id])
+    bot.send_message(message.chat.id,"Письмо было отправленно на почту")
+
     write_to_google_sheets(ocr_result)
+    bot.send_message(message.chat.id,"Данные были записанны в гугл таблицу")
+
     # Cleanup
     for file_path in user_file_paths[chat_id]:
          os.remove(file_path)
