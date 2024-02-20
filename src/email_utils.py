@@ -9,7 +9,7 @@ import re
 import json
 from dotenv import load_dotenv
 
-PREDEFINED_PDF_FILENAME = "./data/sam_global_catalog.pdf"
+PREDEFINED_PDF_FILENAME = "/opt/perspektiva-bot-py/data/sam_global_catalog.pdf"
 
 load_dotenv()
 
@@ -24,9 +24,11 @@ SMTP_PORT = 587
 SMTP_USERNAME = SMTP_MAIL
 SMTP_PASSWORD = SMTP_PASS
 
-JSON_FILE_PATH = './data/text.json'
+JSON_FILE_PATH = '/opt/perspektiva-bot-py/data/text.json'
+JSON_CONCRETE_FILE_PATH = '/opt/perspektiva-bot-py/data/text_concrete.json'
 
-def extract_and_replace_from_json(json_string, json_file_path=JSON_FILE_PATH):
+
+def extract_and_replace_from_json(json_string, json_file_path):
     try:
         json_data = json.loads(json_string)
     except json.JSONDecodeError:
@@ -63,7 +65,10 @@ def send_email(bot,json_text,receiver_email, attachment_path_1=PREDEFINED_PDF_FI
     And then send email with prededicated text, subject.
     """
     try:
-        data = extract_and_replace_from_json(json_text)
+        if attachment_paths:
+            data = extract_and_replace_from_json(json_text,JSON_CONCRETE_FILE_PATH)
+        else:
+            data = extract_and_replace_from_json(json_text,JSON_FILE_PATH)
 
         msg = MIMEMultipart()
         msg['From'] = SMTP_USERNAME
